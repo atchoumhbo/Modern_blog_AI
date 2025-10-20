@@ -1,0 +1,32 @@
+{
+  "collectionName": "components_schema_structured_data",
+  "info": {
+    "displayName": "Structured Data",
+    "description": "Données structurées JSON-LD pour le référencement",
+    "icon": "code"
+  },
+  "options": {},
+  "attributes": {
+    "type": {
+      "type": "enumeration",
+      "enum": ["Article", "BlogPosting", "NewsArticle"],
+      "default": "Article",
+      "required": true
+    },
+    "headline": {
+      "type": "string",
+      "maxLength": 110,
+      "description": "Titre optimisé pour les résultats de recherche"
+    },
+    "datePublished": {
+      "type": "datetime"
+    },
+    "dateModified": {
+      "type": "datetime"
+    },
+    "wordCount": {
+      "type": "integer",
+      "min": 0
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "collectionName": "components_seo_seo_data",
+  "info": {
+    "displayName": "SEO Data",
+    "description": "Composant SEO réutilisable pour optimiser le référencement",
+    "icon": "search"
+  },
+  "options": {},
+  "attributes": {
+    "metaTitle": {
+      "type": "string",
+      "maxLength": 60,
+      "minLength": 10
+    },
+    "metaDescription": {
+      "type": "text",
+      "maxLength": 155,
+      "minLength": 50
+    },
+    "keywords": {
+      "type": "string",
+      "description": "Mots-clés séparés par des virgules"
+    },
+    "canonicalUrl": {
+      "type": "string",
+      "regex": "^https?:\\/\\/.+"
+    },
+    "preventIndexing": {
+      "type": "boolean",
+      "default": false
+    },
+    "ogImage": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": ["images"],
+      "description": "Image Open Graph (1200x630px recommandé)"
+    },
+    "twitterImage": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": ["images"],
+      "description": "Image Twitter Card (560x300px recommandé)"
+    }
+  }
+}

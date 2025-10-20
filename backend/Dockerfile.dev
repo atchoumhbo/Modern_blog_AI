@@ -1,0 +1,45 @@
+# Dockerfile pour développement local avec Docker
+# Réinstalle les node_modules dans le container Linux pour éviter les conflits avec Windows
+
+FROM node:20-alpine
+
+WORKDIR /opt/app
+
+# Installer les dépendances système pour better-sqlite3
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    gcc \
+    libc-dev \
+    pkgconfig \
+    sqlite-dev \
+    curl \
+    && rm -rf /var/cache/apk/*
+
+# Copier package.json et package-lock.json
+COPY package*.json ./
+
+# Installer TOUTES les dépendances dans le container Linux
+RUN npm install && npm cache clean --force
+
+# Le code source sera monté via volume dans docker-compose.dev.yml
+# On ne copie rien d'autre ici pour permettre le hot-reload
+
+# Créer les dossiers nécessaires
+RUN mkdir -p public/uploads data
+
+# Exposer le port
+EXPOSE 1337
+
+# Variables d'environnement
+ENV NODE_ENV=development
+ENV HOST=0.0.0.0
+ENV PORT=1337
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:1337/_health || exit 1
+
+# Commande de démarrage en mode développement
+CMD ["npm", "run", "develop"]

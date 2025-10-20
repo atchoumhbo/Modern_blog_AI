@@ -1,0 +1,91 @@
+version: '3.8'
+
+# Configuration Docker pour développement local - STRAPI + FRONTEND seulement
+# Strapi utilise SQLite, pas besoin de PostgreSQL ni Redis
+
+services:
+  # Backend Strapi (dans un container Docker avec SQLite)
+  strapi:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: blog-strapi-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      DATABASE_CLIENT: sqlite
+      DATABASE_FILENAME: ./data/data.db
+      JWT_SECRET: docker_dev_jwt_secret_minimum_32_characters_long_for_development
+      ADMIN_JWT_SECRET: docker_dev_admin_jwt_secret_minimum_32_characters_for_dev
+      API_TOKEN_SALT: docker_dev_api_token_salt_minimum_32_characters_for_dev
+      TRANSFER_TOKEN_SALT: docker_dev_transfer_token_salt_minimum_32_characters
+      APP_KEYS: docker_dev_key1_minimum_32_chars,docker_dev_key2_minimum_32_chars,docker_dev_key3_minimum_32_chars,docker_dev_key4_minimum_32_chars
+      HOST: 0.0.0.0
+      PORT: 1337
+      PUBLIC_URL: http://localhost:1339  # URL publique pour les médias
+      WEBHOOKS_POPULATE_RELATIONS: false
+    volumes:
+      - strapi_dev_uploads:/opt/app/public/uploads
+      - strapi_dev_data:/opt/app/data
+      - ./backend:/opt/app  # Montage du code source pour le développement
+      - /opt/app/node_modules  # Exclure node_modules du montage
+    ports:
+      - "1339:1337"  # Port Docker différent du développement local
+    networks:
+      - blog-dev-network
+    # Pas de dépendances - utilise SQLite local
+    command: npm run develop  # Mode développement Strapi
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend React (dans un container Docker)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+      args:
+        VITE_STRAPI_URL: http://localhost:1339  # Client-side URL (browser)
+        VITE_STRAPI_URL_SERVER: http://strapi:1337  # Server-side URL (SSR inside Docker)
+        VITE_API_URL: http://localhost:1339/api
+        VITE_SITE_URL: http://localhost:5173
+        VITE_SITE_NAME: Modern Blog Leader - Docker Dev
+        VITE_GA_MEASUREMENT_ID: ""
+    container_name: blog-frontend-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 5173
+      DOCKER: "true"
+      VITE_STRAPI_URL: http://localhost:1339  # Client-side URL (browser)
+      VITE_STRAPI_URL_SERVER: http://strapi:1337  # Server-side URL (SSR inside Docker)
+      VITE_API_URL: http://localhost:1339/api
+      VITE_SITE_URL: http://localhost:5173
+      HOST: 0.0.0.0
+    volumes:
+      - ./frontend:/app  # Montage du code source pour le développement
+      - /app/node_modules  # Exclure node_modules du montage
+    ports:
+      - "5173:5173"  # Port standard Vite
+    networks:
+      - blog-dev-network
+    depends_on:
+      strapi:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  blog-dev-network:
+    driver: bridge
+
+volumes:
+  strapi_dev_uploads:
+    name: blog_strapi_dev_uploads
+  strapi_dev_data:
+    name: blog_strapi_dev_data

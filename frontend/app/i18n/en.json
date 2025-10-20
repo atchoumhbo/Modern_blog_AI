@@ -1,0 +1,109 @@
+{
+  "common": {
+    "siteName": "Modern Blog Leader",
+    "skipToContent": "Skip to content",
+    "home": "Home",
+    "blog": "Blog",
+    "projects": "Projects",
+    "about": "About",
+    "contact": "Contact",
+    "readMore": "Read more",
+    "featured": "Featured",
+    "previous": "Previous",
+    "next": "Next",
+    "first": "First",
+    "last": "Last"
+  },
+  "home": {
+    "featuresTitle": "Why Choose Our Platform?",
+    "featuresSubtitle": "We've built the most advanced blogging platform with features that matter.",
+    "heroTitle1": "The Future of",
+    "heroTitle2": "Blogging",
+    "heroDesc": "Experience the ultimate blogging platform with AI-powered content generation, modern design, intelligent dark mode, and performance that sets new standards.",
+    "exploreBlog": "Explore Blog",
+    "viewProjects": "View Projects",
+    "latestPosts": "Latest posts",
+    "latestPostsSubtitle": "Discover my latest thoughts, tutorials, and experiences in web development",
+    "viewAllArticles": "View all articles",
+    "noPostsTitle": "First articles in preparation",
+    "noPostsDesc": "High-quality content is coming soon!",
+  "freshContentTitle": "Fresh content regularly",
+    "latestProjects": "Latest projects",
+    "latestProjectsTitle": "Recent Projects",
+    "latestProjectsDesc": "A selection of recent projects with stack, demos, and code.",
+    "viewAll": "View all",
+    "viewAllProjects": "View all projects",
+    "noProjectsDesc": "No projects yet. Create some in Strapi.",
+    "ctaTitle": "Ready to Experience the Future?",
+    "ctaDesc": "Join thousands of creators who have already made the switch to our platform.",
+    "ctaPrimary": "Start Reading",
+    "ctaSecondary": "Get in Touch",
+    "features": {
+      "lightning": {
+        "title": "Lightning Fast",
+        "desc": "Built with React Router v7 and optimized for speed. Sub-second loading times guaranteed."
+      },
+      "ai": {
+        "title": "AI-Powered Content",
+        "desc": "Intelligent content generation and curation powered by advanced AI algorithms."
+      },
+      "stack": {
+        "title": "Modern Tech Stack",
+        "desc": "Built with the latest technologies: React Router v7, TypeScript, Tailwind CSS, and Strapi."
+      },
+      "community": {
+        "title": "Community Driven",
+        "desc": "Join thousands of developers and writers in our growing community."
+      }
+    },
+    "stats": {
+      "activeUsers": "Active Users",
+      "articlesPublished": "Articles Published",
+      "communityMembers": "Community Members",
+      "countriesReached": "Countries Reached"
+    }
+  },
+  "blog": {
+    "title": "Latest Insights",
+    "subtitle": "Discover the latest articles, tutorials, and insights on modern web development",
+    "featuredArticle": "Featured Article",
+    "noneTitle": "No articles yet",
+    "noneDesc": "The first articles are coming soon!",
+    "more": "More articles",
+    "minutes": "min"
+  },
+  "projects": {
+    "title": "Latest Projects",
+    "subtitle": "A selection of recent projects with stack, demos, and code.",
+    "noneTitle": "No projects yet",
+    "noneDesc": "Add your first projects in Strapi.",
+    "featuredProject": "Featured Project",
+    "more": "More projects",
+    "backToProjects": "Back to projects"
+  },
+  "about": {
+    "title": "About Modern Blog Leader",
+    "intro": "We're building the future of blogging with AI-powered content, modern design, and exceptional user experience.",
+    "missionTitle": "Our Mission",
+    "missionDesc": "To create the most advanced, user-friendly, and visually stunning blogging platform that empowers creators and engages readers like never before.",
+    "stackTitle": "Technology Stack",
+    "stack": {
+      "frontend": "Frontend:",
+      "styling": "Styling:",
+      "backend": "Backend:",
+      "ai": "AI Integration:",
+      "aiDesc": "Multi-provider AI content generation",
+      "deployment": "Deployment:",
+      "deploymentDesc": "Modern CI/CD with performance monitoring"
+    }
+  },
+  "contact": {
+    "title": "Contact me",
+    "subtitle": "We'd love to hear from you. Send us a message and we'll respond as soon as possible.",
+    "name": "Name",
+    "email": "Email",
+    "subject": "Subject",
+    "message": "Message",
+    "send": "Send Message"
+  }
+}

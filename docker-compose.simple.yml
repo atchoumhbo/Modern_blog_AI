@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: strapi_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: strapi_admin
+      POSTGRES_PASSWORD: Password123!
+      POSTGRES_DB: strapi_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - strapi_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U strapi_admin -d strapi_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Strapi Backend
+  strapi:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: strapi_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # Server
+      HOST: 0.0.0.0
+      PORT: 1337
+      NODE_ENV: production
+      
+      # Database
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: strapi_db
+      DATABASE_USERNAME: strapi_admin
+      DATABASE_PASSWORD: Password123!
+      DATABASE_SSL: false
+      
+    ports:
+      - "1337:1337"
+    volumes:
+      # Persist uploads and cache
+      - strapi_uploads:/opt/app/public/uploads
+      - strapi_cache:/opt/app/.cache
+    networks:
+      - strapi_network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:1337/_health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+networks:
+  strapi_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  strapi_uploads:
+    driver: local
+  strapi_cache:
+    driver: local

@@ -1,0 +1,106 @@
+# Docker Compose - PRODUCTION MERN COMPLÈTE
+# Backend MERN + Frontend SSR + PostgreSQL
+# Domaine: https://blog.bh-systems.be
+# Backend: https://blog.bh-systems.be/api (port interne 3001)
+# Frontend: https://blog.bh-systems.be (port interne 3002)
+
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: blog-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: blog_mern
+      POSTGRES_USER: blog_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-BlogSecurePass2024!}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - blog-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blog_user -d blog_mern"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend MERN (Node.js + Express + Prisma)
+  backend:
+    build:
+      context: ./backend-mern
+      dockerfile: Dockerfile
+    container_name: blog-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://blog_user:${DB_PASSWORD:-BlogSecurePass2024!}@postgres:5432/blog_mern?schema=public
+      JWT_SECRET: ${JWT_SECRET:-your_super_secret_jwt_key_change_in_production_minimum_32_characters}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_super_secret_refresh_key_change_in_production_min_32_chars}
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      CORS_ORIGINS: https://blog.bh-systems.be,http://localhost:3002,http://localhost:5190
+      FRONTEND_URL: https://blog.bh-systems.be
+    ports:
+      - "3001:3000"  # Exposé pour Nginx
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - blog-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend React Router v7 SSR
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.ssr
+    container_name: blog-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Backend type
+      VITE_BACKEND_TYPE: mern
+      # API URLs
+      VITE_API_URL: https://blog.bh-systems.be/api
+      VITE_BACKEND_URL_SERVER: http://blog-backend:3000
+      # Site URLs
+      VITE_SITE_URL: https://blog.bh-systems.be
+      VITE_STRAPI_URL: https://blog.bh-systems.be
+      # i18n
+      VITE_LOCALES: fr,en
+      VITE_DEFAULT_LOCALE: fr
+    ports:
+      - "3002:3000"  # Exposé pour Nginx
+    networks:
+      - blog-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  blog-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  backend_uploads:
+    driver: local

@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  # Frontend React Router v7 SSR
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.ssr
+      args:
+        - NODE_ENV=production
+    container_name: blog-frontend-prod
+    restart: unless-stopped
+    ports:
+      - "3002:3000"  # Port 3002 sur l'hôte pour éviter conflit avec backend
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - VITE_BACKEND_TYPE=mern
+      - VITE_API_URL=https://blog.bh-systems.be/api
+      - VITE_SITE_URL=https://blog.bh-systems.be
+      - VITE_LOCALES=fr,en
+      - VITE_DEFAULT_LOCALE=fr
+    networks:
+      - blog-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=false"  # Pas de Traefik, on utilise Nginx
+
+networks:
+  blog-network:
+    name: blog-network
+    external: true

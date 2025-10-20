@@ -1,0 +1,493 @@
+{
+  "name": "Reddit Tech Analysis & Content Generation - Advanced with Google Sheets",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c41acdc8-e192-d578-3210-b8ac72de3207",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a341a45ed822169def780959c10e8d69b675eedd145484bf7e236d4f63fea038"
+  },
+  "id": "xisR1Gzozq5v5zV0",
+  "tags": [],
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "name": "Déclencheur programmé",
+      "id": "2b35b10b-9a93-ad42-c527-5301637cae20",
+      "position": [100, 100]
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "subreddit": "Cybersecurity",
+        "keyword": "vulnerability security",
+        "limit": 50,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.reddit",
+      "typeVersion": 1,
+      "name": "Reddit - Recherche Cybersecurity",
+      "credentials": {
+        "redditOAuth2Api": {
+          "id": "REDDIT_CRED_ID",
+          "name": "Reddit account"
+        }
+      },
+      "id": "90f58047-aaf2-f92d-948d-b050bc18ec9a",
+      "position": [300, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "const processedPosts = [];\n\nfor (const item of $input.all()) {\n  const post = item.json;\n\n  // Score d'impact avancé avec pondération cybersecurity\n  const baseScore = (post.ups || 0) + (post.num_comments || 0) * 3;\n  const freshnessBonus = (Date.now()/1000 - post.created_utc < 86400) ? 30 : 0;\n  const controversyBonus = (post.upvote_ratio && post.upvote_ratio < 0.7) ? 20 : 0;\n  const securityKeywordBonus = calculateSecurityBonus(post.title + ' ' + (post.selftext || ''));\n  const finalImpactScore = baseScore + freshnessBonus + controversyBonus + securityKeywordBonus;\n\n  // Filtrer posts avec impact significatif (seuil plus élevé pour cybersecurity)\n  if (finalImpactScore > 35) {\n    const extractedKeywords = extractSecurityKeywords(post.title + ' ' + (post.selftext || ''));\n    const contentLength = (post.selftext || post.title).length;\n    const estimatedReadingTime = Math.ceil(contentLength / 1000);\n    const threatLevel = assessThreatLevel(post.title, post.selftext || '');\n\n    processedPosts.push({\n      id: post.id,\n      title: post.title,\n      content: post.selftext || post.title,\n      url: `https://reddit.com${post.permalink}`,\n      subreddit: post.subreddit_name_prefixed,\n      score: post.ups || 0,\n      comments: post.num_comments || 0,\n      upvote_ratio: post.upvote_ratio || 1,\n      impactScore: finalImpactScore,\n      created: new Date(post.created_utc * 1000).toISOString(),\n      created_readable: new Date(post.created_utc * 1000).toLocaleDateString('fr-FR'),\n      author: post.author,\n      keywords: extractedKeywords,\n      status: 'candidate',\n      contentLength: contentLength,\n      estimatedReadingTime: estimatedReadingTime,\n      processingPriority: calculateProcessingPriority(finalImpactScore, extractedKeywords, threatLevel),\n      seoKeywords: generateSecuritySEOKeywords(post.title, extractedKeywords),\n      threatLevel: threatLevel,\n      securityCategory: categorizeSecurityTopic(extractedKeywords)\n    });\n  }\n}\n\n// Trier par priorité et threat level\nprocessedPosts.sort((a, b) => (b.processingPriority * (a.threatLevel === 'critical' ? 1.5 : 1)) - (a.processingPriority * (b.threatLevel === 'critical' ? 1.5 : 1)));\n\n// Fonctions helper spécialisées cybersecurity\nfunction calculateSecurityBonus(text) {\n  const criticalKeywords = ['zero-day', 'rce', 'privilege escalation', 'data breach', 'ransomware', 'apt'];\n  const highKeywords = ['vulnerability', 'exploit', 'malware', 'phishing', 'ddos', 'backdoor'];\n  const mediumKeywords = ['security', 'patch', 'update', 'firewall', 'antivirus', 'encryption'];\n  \n  const lowerText = text.toLowerCase();\n  let bonus = 0;\n  \n  criticalKeywords.forEach(keyword => {\n    if (lowerText.includes(keyword)) bonus += 50;\n  });\n  \n  highKeywords.forEach(keyword => {\n    if (lowerText.includes(keyword)) bonus += 25;\n  });\n  \n  mediumKeywords.forEach(keyword => {\n    if (lowerText.includes(keyword)) bonus += 10;\n  });\n  \n  return bonus;\n}\n\nfunction extractSecurityKeywords(text) {\n  const securityKeywords = [\n    'vulnerability', 'exploit', 'malware', 'ransomware', 'phishing', 'ddos',\n    'zero-day', 'rce', 'sql-injection', 'xss', 'csrf', 'privilege-escalation',\n    'authentication', 'authorization', 'encryption', 'decryption', 'hash',\n    'firewall', 'ids', 'ips', 'siem', 'soc', 'incident-response',\n    'penetration-testing', 'red-team', 'blue-team', 'threat-hunting',\n    'compliance', 'gdpr', 'iso27001', 'nist', 'owasp',\n    'network-security', 'endpoint-security', 'cloud-security', 'mobile-security'\n  ];\n\n  const foundKeywords = [];\n  const lowerText = text.toLowerCase();\n\n  securityKeywords.forEach(keyword => {\n    if (lowerText.includes(keyword.replace('-', ' ')) || lowerText.includes(keyword.replace('-', ''))) {\n      foundKeywords.push(keyword);\n    }\n  });\n\n  return foundKeywords.slice(0, 8).join(', ');\n}\n\nfunction assessThreatLevel(title, content) {\n  const criticalIndicators = ['zero-day', 'rce', 'data breach', 'ransomware', 'apt', 'nation-state'];\n  const highIndicators = ['vulnerability', 'exploit', 'malware', 'backdoor', 'privilege escalation'];\n  \n  const text = (title + ' ' + content).toLowerCase();\n  \n  if (criticalIndicators.some(indicator => text.includes(indicator))) {\n    return 'critical';\n  } else if (highIndicators.some(indicator => text.includes(indicator))) {\n    return 'high';\n  } else {\n    return 'medium';\n  }\n}\n\nfunction calculateProcessingPriority(impactScore, keywords, threatLevel) {\n  let priority = impactScore;\n  \n  // Bonus selon threat level\n  switch(threatLevel) {\n    case 'critical': priority += 100; break;\n    case 'high': priority += 50; break;\n    case 'medium': priority += 20; break;\n  }\n  \n  // Bonus trending security topics\n  const trendingSecurityKeywords = ['ai-security', 'quantum-cryptography', 'zero-trust', 'devsecops', 'cloud-security'];\n  const keywordArray = keywords.split(', ');\n  \n  trendingSecurityKeywords.forEach(trending => {\n    if (keywordArray.includes(trending)) {\n      priority += 30;\n    }\n  });\n  \n  return priority;\n}\n\nfunction generateSecuritySEOKeywords(title, techKeywords) {\n  const securitySEOTerms = [\n    'cybersecurity guide', 'security best practices', 'vulnerability analysis',\n    'threat detection', 'incident response', 'security assessment',\n    'penetration testing', 'security audit', 'compliance framework'\n  ];\n  \n  const titleWords = title.toLowerCase().split(' ');\n  const applicableSEO = securitySEOTerms.filter(term => \n    titleWords.some(word => term.includes(word))\n  );\n  \n  return [techKeywords, applicableSEO.join(', ')].filter(Boolean).join(', ');\n}\n\nfunction categorizeSecurityTopic(keywords) {\n  const categories = {\n    'Network Security': ['firewall', 'ids', 'ips', 'ddos', 'network-security'],\n    'Application Security': ['sql-injection', 'xss', 'csrf', 'owasp'],\n    'Incident Response': ['malware', 'ransomware', 'incident-response', 'forensics'],\n    'Compliance & Governance': ['gdpr', 'iso27001', 'nist', 'compliance'],\n    'Cloud Security': ['cloud-security', 'aws-security', 'azure-security'],\n    'Threat Intelligence': ['apt', 'threat-hunting', 'threat-intelligence']\n  };\n  \n  const keywordArray = keywords.split(', ');\n  \n  for (const [category, categoryKeywords] of Object.entries(categories)) {\n    if (categoryKeywords.some(keyword => keywordArray.includes(keyword))) {\n      return category;\n    }\n  }\n  \n  return 'General Security';\n}\n\nconsole.log(`Analysé ${processedPosts.length} posts cybersecurity avec scoring avancé`);\nreturn processedPosts.slice(0, 15).map(post => ({ json: post }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "name": "Filtrage avancé cybersecurity",
+      "id": "122b1ce6-ec8b-12de-6e6e-a5310f99544e",
+      "position": [500, 100]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": "YOUR_GOOGLE_SHEET_ID",
+        "sheetName": "Reddit Posts Tracking",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Post ID": "={{ $json.id }}",
+            "Title": "={{ $json.title }}",
+            "Subreddit": "={{ $json.subreddit }}",
+            "Score": "={{ $json.score }}",
+            "Comments": "={{ $json.comments }}",
+            "Impact Score": "={{ $json.impactScore }}",
+            "Threat Level": "={{ $json.threatLevel }}",
+            "Security Category": "={{ $json.securityCategory }}",
+            "Keywords": "={{ $json.keywords }}",
+            "Created": "={{ $json.created_readable }}",
+            "Processing Priority": "={{ $json.processingPriority }}",
+            "Status": "candidate",
+            "Analyzed At": "={{ $now }}",
+            "URL": "={{ $json.url }}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "name": "Sauvegarder dans Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "a12b3c4d-5e6f-7890-abcd-ef1234567890",
+      "position": [700, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sélectionner le meilleur post basé sur scoring cybersecurity\nconst candidates = $input.all().sort((a, b) => {\n  const scoreA = a.json.processingPriority * (a.json.threatLevel === 'critical' ? 1.5 : 1);\n  const scoreB = b.json.processingPriority * (b.json.threatLevel === 'critical' ? 1.5 : 1);\n  return scoreB - scoreA;\n});\n\nif (candidates.length === 0) {\n  throw new Error('Aucun post cybersecurity candidat trouvé');\n}\n\nconst selectedPost = candidates[0];\n\n// Enrichir avec métadonnées de sélection avancées\nconst enrichedPost = {\n  ...selectedPost.json,\n  selectedAt: new Date().toISOString(),\n  selectionRank: 1,\n  totalCandidates: candidates.length,\n  competitionLevel: candidates.length > 10 ? 'high' : candidates.length > 5 ? 'medium' : 'low',\n  expectedPerformance: selectedPost.json.processingPriority > 150 ? 'excellent' : \n                      selectedPost.json.processingPriority > 100 ? 'good' : 'average',\n  analysisDepth: selectedPost.json.threatLevel === 'critical' ? 'deep' : 'standard',\n  contentStrategy: selectedPost.json.securityCategory,\n  estimatedEngagement: calculateEstimatedEngagement(selectedPost.json)\n};\n\nfunction calculateEstimatedEngagement(post) {\n  let engagement = post.score + (post.comments * 2);\n  \n  if (post.threatLevel === 'critical') engagement *= 1.8;\n  if (post.threatLevel === 'high') engagement *= 1.4;\n  \n  if (post.keywords.includes('zero-day') || post.keywords.includes('ransomware')) {\n    engagement *= 1.6;\n  }\n  \n  return Math.round(engagement);\n}\n\nconsole.log(`Post cybersecurity sélectionné: \"${enrichedPost.title}\" avec priorité ${enrichedPost.processingPriority} (${enrichedPost.threatLevel})`);\n\nreturn [{ json: enrichedPost }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "name": "Sélectionner post prioritaire",
+      "id": "49eed27f-9502-86c0-1bf3-d55070294078",
+      "position": [900, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "perplexityApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"model\": \"sonar-pro\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Tu es un expert en cybersécurité. Trouve 5 URLs techniques sur le sujet demandé. Privilégie: documentation officielle, blogs sécurité reconnus, CVE databases, security advisories. Réponds uniquement en JSON valide.\"\n    },\n    {\n      \"role\": \"user\", \n      \"content\": \"Sujet cybersécurité: {{ $json.title }}\\n\\nCategorie: {{ $json.securityCategory }}\\nThreat Level: {{ $json.threatLevel }}\\nKeywords: {{ $json.keywords }}\\n\\nTrouve 5 sources techniques:\\n1. Documentation/advisory officielle\\n2. CVE ou security bulletin\\n3. Blog technique cybersécurité\\n4. Analysis ou whitepaper\\n5. Tools ou mitigation guide\\n\\nRéponds en JSON strictement:\\n{\\n  \\\"urls\\\": [\\\"url1\\\", \\\"url2\\\", \\\"url3\\\", \\\"url4\\\", \\\"url5\\\"],\\n  \\\"titles\\\": [\\\"title1\\\", \\\"title2\\\", \\\"title3\\\", \\\"title4\\\", \\\"title5\\\"],\\n  \\\"sources\\\": [\\\"type1\\\", \\\"type2\\\", \\\"type3\\\", \\\"type4\\\", \\\"type5\\\"]\\n}\"\n    }\n  ],\n  \"temperature\": 0.2,\n  \"max_tokens\": 2000\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "name": "Perplexity - Recherche sources cybersécurité",
+      "credentials": {
+        "perplexityApi": {
+          "id": "PERPLEXITY_CRED_ID",
+          "name": "Perplexity account"
+        }
+      },
+      "id": "6de39f93-14cc-6aac-8c9e-511257f17252",
+      "position": [1100, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parser la réponse Perplexity et préparer la boucle d'analyse\nconst perplexityResponse = JSON.parse($json.choices[0].message.content);\nconst selectedPost = $node['Sélectionner post prioritaire'].json;\n\n// Créer un objet pour chaque URL à analyser\nconst urlsToAnalyze = [];\n\nfor (let i = 0; i < perplexityResponse.urls.length; i++) {\n  urlsToAnalyze.push({\n    url: perplexityResponse.urls[i],\n    title: perplexityResponse.titles[i],\n    sourceType: perplexityResponse.sources[i],\n    index: i + 1,\n    originalPost: {\n      id: selectedPost.id,\n      title: selectedPost.title,\n      threatLevel: selectedPost.threatLevel,\n      securityCategory: selectedPost.securityCategory,\n      keywords: selectedPost.keywords\n    }\n  });\n}\n\nconsole.log(`Préparation de l'analyse de ${urlsToAnalyze.length} URLs cybersécurité`);\n\nreturn urlsToAnalyze.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "name": "Préparer boucle URLs",
+      "id": "b1c2d3e4-f5g6-h7i8-j9k0-l1m2n3o4p5q6",
+      "position": [1300, 100]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "name": "Boucle sur chaque URL",
+      "id": "c2d3e4f5-g6h7-i8j9-k0l1-m2n3o4p5q6r7",
+      "position": [1500, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "perplexityApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"model\": \"sonar-pro\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Tu es un analyste cybersécurité expert. Analyse cette URL et fournis une analyse technique détaillée. Réponds en JSON valide.\"\n    },\n    {\n      \"role\": \"user\", \n      \"content\": \"Analyse cette source cybersécurité:\\n\\nURL: {{ $json.url }}\\nTitre: {{ $json.title }}\\nType: {{ $json.sourceType }}\\n\\nPost original: {{ $json.originalPost.title }}\\nThreat Level: {{ $json.originalPost.threatLevel }}\\nCatégorie: {{ $json.originalPost.securityCategory }}\\n\\nFournis une analyse JSON:\\n{\\n  \\\"summary\\\": \\\"résumé technique 2-3 phrases\\\",\\n  \\\"keyFindings\\\": [\\\"finding1\\\", \\\"finding2\\\", \\\"finding3\\\"],\\n  \\\"technicalDetails\\\": \\\"détails techniques importants\\\",\\n  \\\"impact\\\": \\\"impact et implications\\\",\\n  \\\"recommendations\\\": [\\\"rec1\\\", \\\"rec2\\\"],\\n  \\\"cvssScore\\\": \\\"score si applicable\\\",\\n  \\\"references\\\": [\\\"ref1\\\", \\\"ref2\\\"]\\n}\"\n    }\n  ],\n  \"temperature\": 0.3,\n  \"max_tokens\": 2500\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "name": "Analyser URL individuelle",
+      "credentials": {
+        "perplexityApi": {
+          "id": "PERPLEXITY_CRED_ID",
+          "name": "Perplexity account"
+        }
+      },
+      "id": "d3e4f5g6-h7i8-j9k0-l1m2-n3o4p5q6r7s8",
+      "position": [1700, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parser l'analyse de l'URL et l'enrichir\nconst urlAnalysis = JSON.parse($json.choices[0].message.content);\nconst urlData = $node['Boucle sur chaque URL'].json;\n\n// Enrichir l'analyse avec métadonnées\nconst enrichedAnalysis = {\n  ...urlAnalysis,\n  url: urlData.url,\n  title: urlData.title,\n  sourceType: urlData.sourceType,\n  index: urlData.index,\n  analysisTimestamp: new Date().toISOString(),\n  originalPost: urlData.originalPost,\n  confidence: calculateConfidenceScore(urlAnalysis),\n  priority: calculateAnalysisPriority(urlAnalysis, urlData.sourceType)\n};\n\nfunction calculateConfidenceScore(analysis) {\n  let score = 70; // Base confidence\n  \n  if (analysis.cvssScore && analysis.cvssScore !== 'N/A') score += 20;\n  if (analysis.technicalDetails && analysis.technicalDetails.length > 100) score += 10;\n  if (analysis.references && analysis.references.length > 1) score += 10;\n  \n  return Math.min(score, 100);\n}\n\nfunction calculateAnalysisPriority(analysis, sourceType) {\n  let priority = 50;\n  \n  if (sourceType === 'CVE' || sourceType === 'Security Advisory') priority += 30;\n  if (sourceType === 'Official Documentation') priority += 20;\n  if (analysis.cvssScore && parseFloat(analysis.cvssScore) > 7.0) priority += 25;\n  \n  return priority;\n}\n\nconsole.log(`Analyse URL ${urlData.index}: ${urlData.title} (confiance: ${enrichedAnalysis.confidence}%)`);\n\nreturn [{ json: enrichedAnalysis }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "name": "Enrichir analyse URL",
+      "id": "e4f5g6h7-i8j9-k0l1-m2n3-o4p5q6r7s8t9",
+      "position": [1900, 100]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "name": "Collecter toutes les analyses",
+      "id": "f5g6h7i8-j9k0-l1m2-n3o4-p5q6r7s8t9u0",
+      "position": [2100, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Synthétiser toutes les analyses en un rapport complet\nconst allAnalyses = $input.all().map(item => item.json);\nconst originalPost = allAnalyses[0].originalPost;\n\n// Créer une synthèse intelligente\nconst synthesis = {\n  originalPost: originalPost,\n  totalAnalyses: allAnalyses.length,\n  synthesisTimestamp: new Date().toISOString(),\n  \n  // Agrégation des findings\n  allFindings: allAnalyses.flatMap(analysis => analysis.keyFindings || []),\n  \n  // Agrégation des recommandations\n  allRecommendations: allAnalyses.flatMap(analysis => analysis.recommendations || []),\n  \n  // Détails techniques consolidés\n  technicalSummary: allAnalyses.map(analysis => ({\n    source: analysis.title,\n    sourceType: analysis.sourceType,\n    summary: analysis.summary,\n    technicalDetails: analysis.technicalDetails,\n    impact: analysis.impact,\n    confidence: analysis.confidence\n  })),\n  \n  // Score CVSS le plus élevé\n  maxCvssScore: Math.max(...allAnalyses.map(a => {\n    const score = parseFloat(a.cvssScore);\n    return isNaN(score) ? 0 : score;\n  })),\n  \n  // Priorité globale\n  overallPriority: Math.max(...allAnalyses.map(a => a.priority || 50)),\n  \n  // Confiance moyenne\n  averageConfidence: allAnalyses.reduce((sum, a) => sum + (a.confidence || 70), 0) / allAnalyses.length,\n  \n  // Sources par type\n  sourceBreakdown: allAnalyses.reduce((acc, analysis) => {\n    acc[analysis.sourceType] = (acc[analysis.sourceType] || 0) + 1;\n    return acc;\n  }, {}),\n  \n  // Références uniques\n  allReferences: [...new Set(allAnalyses.flatMap(analysis => analysis.references || []))],\n  \n  // Évaluation globale de la menace\n  threatAssessment: assessOverallThreat(allAnalyses, originalPost.threatLevel)\n};\n\nfunction assessOverallThreat(analyses, originalThreatLevel) {\n  const maxCvss = Math.max(...analyses.map(a => {\n    const score = parseFloat(a.cvssScore);\n    return isNaN(score) ? 0 : score;\n  }));\n  \n  let assessment = originalThreatLevel;\n  \n  if (maxCvss >= 9.0) assessment = 'critical';\n  else if (maxCvss >= 7.0) assessment = 'high';\n  else if (maxCvss >= 4.0) assessment = 'medium';\n  \n  return {\n    level: assessment,\n    maxCvss: maxCvss,\n    reasoning: `Basé sur ${analyses.length} analyses avec CVSS max de ${maxCvss}`\n  };\n}\n\nconsole.log(`Synthèse complète: ${synthesis.totalAnalyses} analyses, threat level ${synthesis.threatAssessment.level}`);\n\nreturn [{ json: synthesis }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "name": "Synthétiser analyses",
+      "id": "g6h7i8j9-k0l1-m2n3-o4p5-q6r7s8t9u0v1",
+      "position": [2300, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Tu es un expert en rédaction technique cybersécurité. Écris des articles détaillés et précis basés sur des analyses multiples. Utilise un ton professionnel mais accessible. Inclus des sections techniques, des recommandations pratiques et des références.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Écris un article technique complet (1500-2000 mots) sur :\\n\\nSUJET: {{ $json.originalPost.title }}\\nCATÉGORIE: {{ $json.originalPost.securityCategory }}\\nTHREAT LEVEL: {{ $json.threatAssessment.level }}\\nCVSS MAX: {{ $json.maxCvssScore }}\\n\\nBASÉ SUR {{ $json.totalAnalyses }} ANALYSES:\\n{{ $json.technicalSummary }}\\n\\nFINDINGS CLÉS:\\n{{ $json.allFindings }}\\n\\nRECOMMANDATIONS:\\n{{ $json.allRecommendations }}\\n\\nSTRUCTURE REQUISE:\\n1. Introduction avec contexte\\n2. Analyse technique détaillée\\n3. Impact et implications\\n4. Recommandations de sécurité\\n5. Conclusion avec prochaines étapes\\n\\nINCLUS:\\n- Détails techniques précis\\n- Exemples concrets\\n- Liens vers ressources\\n- Conseils pratiques\\n- Perspective expertise cybersécurité\"\n    }\n  ],\n  \"temperature\": 0.4,\n  \"max_tokens\": 4000\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "name": "Générer article cybersécurité",
+      "credentials": {
+        "openAiApi": {
+          "id": "OPENAI_CRED_ID",
+          "name": "OpenAi account"
+        }
+      },
+      "id": "004048af-5a5c-6903-c0a2-fae87d1025bc",
+      "position": [2500, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://passenger-beaches-audience-nov.trycloudflare.com/api/articles",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer a4239ed0a52427929d703538e1c298a37b088db1a2f859c17015d5eb150a64b1b5195d8287184867af8ecb923f3bcfec83cd238f18b9b3f4349fbd885edb243a7349adbe7b2c00f14aa453e12a4e003c8286f1393cb60eebb67635845390575185092c7cb277b17a565c3099c9477487d2f615323dd40226c18471f46d8176af"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"data\": {\n    \"title\": \"{{ $node['Synthétiser analyses'].json.originalPost.title }}\",\n    \"content\": \"{{ $json.choices[0].message.content }}\",\n    \"slug\": \"{{ $node['Synthétiser analyses'].json.originalPost.id }}-cybersecurity-analysis\",\n    \"excerpt\": \"Analyse cybersécurité complète basée sur {{ $node['Synthétiser analyses'].json.totalAnalyses }} sources techniques avec threat level {{ $node['Synthétiser analyses'].json.threatAssessment.level }}\",\n    \"status\": \"published\",\n    \"publishedAt\": \"{{ $now }}\",\n    \"category\": \"{{ $node['Synthétiser analyses'].json.originalPost.securityCategory }}\",\n    \"tags\": \"{{ $node['Synthétiser analyses'].json.originalPost.keywords }}\",\n    \"metadata\": {\n      \"threatLevel\": \"{{ $node['Synthétiser analyses'].json.threatAssessment.level }}\",\n      \"cvssScore\": \"{{ $node['Synthétiser analyses'].json.maxCvssScore }}\",\n      \"analysisCount\": {{ $node['Synthétiser analyses'].json.totalAnalyses }},\n      \"confidence\": {{ $node['Synthétiser analyses'].json.averageConfidence }},\n      \"redditUrl\": \"{{ $node['Synthétiser analyses'].json.originalPost.title }}\",\n      \"generatedAt\": \"{{ $now }}\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "name": "Publier dans Strapi",
+      "id": "d277971d-ffcd-7041-2cca-75537612c021",
+      "position": [2700, 100]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": "YOUR_GOOGLE_SHEET_ID",
+        "sheetName": "Published Articles",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Article ID": "={{ $json.data.id }}",
+            "Post ID": "={{ $node['Synthétiser analyses'].json.originalPost.id }}",
+            "Title": "={{ $json.data.attributes.title }}",
+            "Slug": "={{ $json.data.attributes.slug }}",
+            "Category": "={{ $json.data.attributes.category }}",
+            "Threat Level": "={{ $node['Synthétiser analyses'].json.threatAssessment.level }}",
+            "CVSS Score": "={{ $node['Synthétiser analyses'].json.maxCvssScore }}",
+            "Analysis Count": "={{ $node['Synthétiser analyses'].json.totalAnalyses }}",
+            "Confidence": "={{ $node['Synthétiser analyses'].json.averageConfidence }}",
+            "Published At": "={{ $json.data.attributes.publishedAt }}",
+            "Strapi URL": "https://passenger-beaches-audience-nov.trycloudflare.com/admin/content-manager/collection-types/api::article.article/{{ $json.data.id }}",
+            "Status": "published"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "name": "Tracker article publié",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "id": "h7i8j9k0-l1m2-n3o4-p5q6-r7s8t9u0v1w2",
+      "position": [2900, 100]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "subreddit": "{{ $node['Synthétiser analyses'].json.originalPost.title }}",
+        "postId": "{{ $node['Synthétiser analyses'].json.originalPost.id }}",
+        "commentText": "🔒 **Analyse cybersécurité approfondie publiée** 🔒\\n\\nJ'ai créé une analyse technique complète de ce problème basée sur {{ $node['Synthétiser analyses'].json.totalAnalyses }} sources expertes.\\n\\n📊 **Highlights:**\\n• Threat Level: {{ $node['Synthétiser analyses'].json.threatAssessment.level }}\\n• CVSS Score: {{ $node['Synthétiser analyses'].json.maxCvssScore }}\\n• Confiance analyse: {{ $node['Synthétiser analyses'].json.averageConfidence }}%\\n\\n🔗 **Article complet:** https://passenger-beaches-audience-nov.trycloudflare.com/articles/{{ $node['Publier dans Strapi'].json.data.attributes.slug }}\\n\\n*Analyse basée sur sources officielles, CVE databases et recherche technique approfondie.*",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.reddit",
+      "typeVersion": 1,
+      "name": "Commenter sur Reddit",
+      "credentials": {
+        "redditOAuth2Api": {
+          "id": "REDDIT_CRED_ID",
+          "name": "Reddit account"
+        }
+      },
+      "id": "i8j9k0l1-m2n3-o4p5-q6r7-s8t9u0v1w2x3",
+      "position": [3100, 100]
+    }
+  ],
+  "connections": {
+    "Déclencheur programmé": {
+      "main": [
+        [
+          {
+            "node": "Reddit - Recherche Cybersecurity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reddit - Recherche Cybersecurity": {
+      "main": [
+        [
+          {
+            "node": "Filtrage avancé cybersecurity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrage avancé cybersecurity": {
+      "main": [
+        [
+          {
+            "node": "Sauvegarder dans Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sauvegarder dans Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Sélectionner post prioritaire",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sélectionner post prioritaire": {
+      "main": [
+        [
+          {
+            "node": "Perplexity - Recherche sources cybersécurité",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity - Recherche sources cybersécurité": {
+      "main": [
+        [
+          {
+            "node": "Préparer boucle URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer boucle URLs": {
+      "main": [
+        [
+          {
+            "node": "Boucle sur chaque URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Boucle sur chaque URL": {
+      "main": [
+        [
+          {
+            "node": "Analyser URL individuelle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyser URL individuelle": {
+      "main": [
+        [
+          {
+            "node": "Enrichir analyse URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrichir analyse URL": {
+      "main": [
+        [
+          {
+            "node": "Collecter toutes les analyses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collecter toutes les analyses": {
+      "main": [
+        [
+          {
+            "node": "Synthétiser analyses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Synthétiser analyses": {
+      "main": [
+        [
+          {
+            "node": "Générer article cybersécurité",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Générer article cybersécurité": {
+      "main": [
+        [
+          {
+            "node": "Publier dans Strapi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publier dans Strapi": {
+      "main": [
+        [
+          {
+            "node": "Tracker article publié",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tracker article publié": {
+      "main": [
+        [
+          {
+            "node": "Commenter sur Reddit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {}
+}

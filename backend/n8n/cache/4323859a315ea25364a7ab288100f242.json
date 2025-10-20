@@ -1,0 +1,39 @@
+{
+  "timestamp": 1759785185257,
+  "cacheKey": "4323859a315ea25364a7ab288100f242",
+  "result": {
+    "success": true,
+    "filename": "article-react-tutorial-1759785185250-veb2c3.png",
+    "path": "C:\\Devops\\blog_strapi\\backend\\public\\uploads\\generated-images\\article-react-tutorial-1759785185250-veb2c3.png",
+    "url": "/uploads/generated-images/article-react-tutorial-1759785185250-veb2c3.png",
+    "provider": "Stability AI SD3",
+    "cost": 0.003,
+    "generationTime": "6.80",
+    "metadata": {
+      "category": "React.js",
+      "keywords": [
+        "react"
+      ],
+      "dominantColors": [
+        "#61DAFB",
+        "#282C34",
+        "#FFFFFF"
+      ],
+      "technicalElements": [
+        "React logo",
+        "component diagrams",
+        "virtual DOM"
+      ],
+      "detectedContext": "React.js",
+      "articleTitle": "React Tutorial",
+      "subreddit": "reactjs",
+      "timestamp": "2025-10-06T21:13:05.252Z"
+    },
+    "optimization": null,
+    "prompt": {
+      "text": "A professional illustration about react, React components diagram, blue React logo, component tree visualization, modern UI framework, featuring React logo, component diagrams, virtual DOM, high quality, 4k, professional digital art, clean modern design, no text overlay",
+      "negative": "text, words, letters, watermark, signature, blurry, low quality, distorted, ugly, deformed, pixelated, grainy, noise",
+      "style": "digital-art"
+    }
+  }
+}

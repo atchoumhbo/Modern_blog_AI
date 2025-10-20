@@ -1,0 +1,61 @@
+# Multi-stage build for React Router v7 SSR
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build arguments for environment variables
+ARG VITE_BACKEND_TYPE=mern
+ARG VITE_API_URL=https://blog.bh-systems.be/api
+ARG VITE_SITE_URL=https://blog.bh-systems.be
+ARG NODE_ENV=production
+
+# Set environment variables for build
+ENV VITE_BACKEND_TYPE=${VITE_BACKEND_TYPE}
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_SITE_URL=${VITE_SITE_URL}
+ENV NODE_ENV=${NODE_ENV}
+
+# Build for production
+RUN npm run build
+
+# Verify build output
+RUN ls -la build/ && ls -la build/client/ && ls -la build/server/
+
+# Production stage
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install wget for healthcheck
+RUN apk add --no-cache wget
+
+# Copy built files
+COPY --from=builder /app/build ./build
+COPY --from=builder /app/package*.json ./
+
+# Create public directory (may or may not exist in source)
+RUN mkdir -p ./public
+
+# Install only production dependencies
+RUN npm ci --only=production
+
+# Expose port
+EXPOSE 3000
+
+# Environment variables for runtime
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD wget --quiet --tries=1 --spider http://localhost:3000 || exit 1
+
+# Start SSR server using npm script (plus robuste)
+CMD ["npm", "run", "start"]

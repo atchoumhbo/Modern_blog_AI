@@ -1,0 +1,76 @@
+version: '3.8'
+
+# Configuration Docker pour production - STRAPI + FRONTEND avec SQLite
+# Utilise les secrets de production sécurisés
+
+services:
+  # Backend Strapi (production avec SQLite)
+  strapi:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: blog-strapi-prod
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    volumes:
+      - strapi_prod_uploads:/opt/app/public/uploads
+      - strapi_prod_data:/opt/app/data
+      # Pas de montage du code source en production
+    ports:
+      - "1339:1337"  # Port externe 1339 pour éviter conflits
+    networks:
+      - blog-prod-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Frontend React (production)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev  # Utilise le même Dockerfile pour l'instant
+      args:
+        # Variables build-time - à adapter selon ton domaine
+        VITE_STRAPI_URL: http://localhost:1339
+        VITE_API_URL: http://localhost:1339/api
+        VITE_SITE_URL: http://localhost:5173
+        VITE_SITE_NAME: Modern Blog Leader - Production
+        VITE_GA_MEASUREMENT_ID: ""
+    container_name: blog-frontend-prod
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5173
+      DOCKER: "true"
+      # Variables runtime
+      VITE_STRAPI_URL: http://strapi:1337
+      VITE_API_URL: http://strapi:1337/api
+    # Pas de volumes en production
+    ports:
+      - "5173:5173"
+    networks:
+      - blog-prod-network
+    depends_on:
+      strapi:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  blog-prod-network:
+    driver: bridge
+
+volumes:
+  strapi_prod_uploads:
+    name: blog_strapi_prod_uploads
+  strapi_prod_data:
+    name: blog_strapi_prod_data

@@ -1,0 +1,42 @@
+# Dockerfile pour le développement frontend
+FROM node:20-alpine
+
+# Installer des utilitaires
+RUN apk add --no-cache \
+    curl \
+    dumb-init \
+    && rm -rf /var/cache/apk/*
+
+# Créer un utilisateur non-root
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S react -u 1001
+
+WORKDIR /app
+
+# Changer les permissions du dossier
+RUN chown -R react:nodejs /app
+
+# Changer vers l'utilisateur non-root
+USER react
+
+# Copier les fichiers de package
+COPY --chown=react:nodejs package*.json ./
+
+# Installer toutes les dépendances (dev + prod)
+RUN npm install
+
+# Exposer le port Vite dev server
+EXPOSE 5173
+
+# Variables d'environnement de développement
+ENV NODE_ENV=development
+ENV HOST=0.0.0.0
+ENV PORT=5173
+
+# Health check pour Vite dev server
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:5173 || exit 1
+
+# Commande de démarrage
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "run", "dev"]

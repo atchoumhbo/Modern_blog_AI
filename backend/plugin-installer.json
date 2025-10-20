@@ -1,0 +1,11 @@
+{
+  "name": "install-strapi-plugins",
+  "description": "Script pour installer tous les plugins optimisés pour le blog",
+  "main": "index.js",
+  "scripts": {
+    "install-seo-plugins": "npm install @strapi/plugin-seo @strapi/plugin-sitemap",
+    "install-performance-plugins": "npm install @strapi/plugin-redis @strapi/plugin-documentation",
+    "install-media-plugins": "npm install @strapi/provider-upload-cloudinary",
+    "install-all": "npm run install-seo-plugins && npm run install-performance-plugins && npm run install-media-plugins"
+  }
+}

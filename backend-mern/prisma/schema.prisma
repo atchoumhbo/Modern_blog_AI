@@ -1,0 +1,430 @@
+// Prisma Schema pour Modern Blog Leader
+// PostgreSQL avec relations complètes
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// AUTHENTIFICATION & SÉCURITÉ
+// ============================================
+
+model User {
+  id        String  @id @default(uuid())
+  email     String  @unique
+  username  String  @unique
+  password  String // Bcrypt hash
+  firstName String?
+  lastName  String?
+  isActive  Boolean @default(true)
+  isAdmin   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  articles           Article[]
+  projects           Project[]
+  refreshTokens      RefreshToken[]
+  apiKeys            ApiKey[]
+  auditLogs          AuditLog[]
+  workflowExecutions WorkflowExecution[]
+  userBudget         UserBudget?
+  credentials        UserCredential[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+// API Keys pour N8N et webhooks
+model ApiKey {
+  id         String    @id @default(uuid())
+  name       String // Ex: "N8N Automation", "Webhook Integration"
+  key        String    @unique // Hash de la clé API
+  prefix     String // Prefix visible (ex: "mbk_live_")
+  userId     String
+  isActive   Boolean   @default(true)
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+
+  // Permissions
+  canRead   Boolean @default(true)
+  canWrite  Boolean @default(false)
+  canDelete Boolean @default(false)
+
+  // Rate limiting spécifique
+  rateLimit Int? @default(1000) // Requests par heure
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([key])
+  @@index([userId])
+  @@map("api_keys")
+}
+
+// Logs d'audit pour traçabilité
+model AuditLog {
+  id         String  @id @default(uuid())
+  userId     String?
+  apiKeyId   String?
+  action     String // CREATE, READ, UPDATE, DELETE
+  resource   String // Article, Project, etc.
+  resourceId String?
+  ipAddress  String?
+  userAgent  String?
+  metadata   Json? // Données additionnelles
+
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================
+// CONTENU
+// ============================================
+
+model Category {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  color       String? @default("#3B82F6") // Couleur hex
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  articles Article[]
+  projects Project[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id    String  @id @default(uuid())
+  name  String  @unique
+  slug  String  @unique
+  color String? @default("#10B981")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  articles Article[]
+  projects Project[]
+
+  @@map("tags")
+}
+
+model Article {
+  id         String  @id @default(uuid())
+  title      String
+  slug       String  @unique
+  excerpt    String?
+  content    String // Markdown ou HTML
+  coverImage String?
+
+  // Metadata
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  viewCount   Int       @default(0)
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String?
+
+  // Relations
+  authorId   String
+  categoryId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags     Tag[]
+
+  @@index([slug])
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([isPublished])
+  @@index([publishedAt])
+  @@map("articles")
+}
+
+model Project {
+  id          String  @id @default(uuid())
+  title       String
+  slug        String  @unique
+  description String?
+  content     String? // Description détaillée
+  coverImage  String?
+
+  // Project specifics
+  githubUrl String?
+  demoUrl   String?
+  status    ProjectStatus @default(IN_PROGRESS)
+
+  // Metadata
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  viewCount   Int       @default(0)
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+
+  // Relations
+  authorId   String
+  categoryId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags     Tag[]
+
+  @@index([slug])
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([isPublished])
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+// ============================================
+// N8N WORKFLOW AUTOMATION
+// ============================================
+
+// Tracking des exécutions de workflows N8N
+model WorkflowExecution {
+  id             String  @id @default(uuid())
+  n8nExecutionId String? @unique // ID de l'exécution N8N (vient des webhooks) - optionnel
+  workflowId     String // ID du workflow N8N (ex: "reddit-to-blog-v2")
+  workflowName   String // Nom lisible du workflow
+
+  // Exécution
+  status      WorkflowStatus @default(PENDING)
+  startedAt   DateTime       @default(now())
+  completedAt DateTime?
+  duration    Int? // Durée en secondes
+
+  // Résultats
+  inputData    Json? // Données d'entrée (URL Reddit, etc.)
+  outputData   Json? // Résultats (article créé, images, etc.)
+  errorMessage String?
+  errorStack   String?
+
+  // Coûts
+  openaiCost      Float @default(0) // $ USD
+  stabilityAiCost Float @default(0) // $ USD
+  totalCost       Float @default(0) // Total en $ USD
+
+  // Tracking granulaire
+  stepsTotal     Int @default(0)
+  stepsCompleted Int @default(0)
+  stepsFailed    Int @default(0)
+
+  // Reprise après échec
+  canRetry   Boolean @default(true)
+  retryCount Int     @default(0)
+  maxRetries Int     @default(3)
+  parentId   String? // ID de l'exécution originale si c'est un retry
+
+  // User
+  userId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  steps   WorkflowStep[]
+  parent  WorkflowExecution?  @relation("RetryRelation", fields: [parentId], references: [id])
+  retries WorkflowExecution[] @relation("RetryRelation")
+
+  @@index([userId])
+  @@index([workflowId])
+  @@index([status])
+  @@index([startedAt])
+  @@index([parentId])
+  @@map("workflow_executions")
+}
+
+// Tracking détaillé de chaque étape du workflow
+model WorkflowStep {
+  id          String @id @default(uuid())
+  executionId String
+
+  // Étape
+  stepName  String // Ex: "fetch_reddit_post", "generate_image", "create_article"
+  stepOrder Int // Ordre d'exécution (1, 2, 3...)
+  stepType  String // "API_CALL", "AI_GENERATION", "DATABASE_WRITE"
+
+  // Exécution
+  status      StepStatus @default(PENDING)
+  startedAt   DateTime   @default(now())
+  completedAt DateTime?
+  duration    Int? // Durée en millisecondes
+
+  // Données
+  inputData    Json? // Input de cette étape
+  outputData   Json? // Output de cette étape
+  errorMessage String?
+
+  // Coûts de cette étape
+  cost        Float @default(0) // $ USD
+  costDetails Json? // Détails du calcul de coût
+
+  // Retry
+  canRetry   Boolean @default(true)
+  retryCount Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@unique([executionId, stepName])
+  @@index([executionId])
+  @@index([stepName])
+  @@index([status])
+  @@map("workflow_steps")
+}
+
+// Budget utilisateur pour les workflows
+model UserBudget {
+  id     String @id @default(uuid())
+  userId String @unique
+
+  // Budget mensuel
+  monthlyLimit Float @default(50.0) // $ USD par mois
+  currentSpent Float @default(0) // $ USD dépensés ce mois
+
+  // Période
+  periodStart DateTime @default(now())
+  periodEnd   DateTime // Fin du mois courant
+
+  // Alertes
+  alertAt80   Boolean @default(true) // Alerte à 80% du budget
+  alertAt90   Boolean @default(true) // Alerte à 90%
+  alertAt100  Boolean @default(true) // Alerte à 100%
+  emailAlerts Boolean @default(true)
+
+  // Stats
+  totalExecutions Int @default(0)
+  successfulRuns  Int @default(0)
+  failedRuns      Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([periodEnd])
+  @@map("user_budgets")
+}
+
+enum WorkflowStatus {
+  PENDING // En attente de démarrage
+  RUNNING // En cours d'exécution
+  COMPLETED // Terminé avec succès
+  FAILED // Échoué
+  PAUSED // Mis en pause
+  CANCELLED // Annulé par l'utilisateur
+  RETRYING // En cours de retry
+}
+
+enum StepStatus {
+  PENDING // En attente
+  RUNNING // En cours
+  COMPLETED // Terminé avec succès
+  FAILED // Échoué
+  SKIPPED // Sauté (déjà fait dans un retry)
+}
+
+// ============================================
+// CREDENTIALS SÉCURISÉES (API KEYS)
+// ============================================
+
+// Stockage chiffré des credentials pour services externes
+model UserCredential {
+  id     String @id @default(uuid())
+  userId String
+
+  // Service
+  service     CredentialService // REDDIT, OPENAI, STABILITY_AI, etc.
+  name        String // Nom donné par l'utilisateur (ex: "Reddit Production")
+  description String? // Description optionnelle
+
+  // Données chiffrées (AES-256)
+  encryptedData String // JSON chiffré contenant les credentials
+  iv            String // Initialization Vector pour AES
+  
+  // Métadata
+  isActive Boolean @default(true)
+  lastUsedAt DateTime?
+  expiresAt  DateTime? // Pour gérer l'expiration des tokens
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, service]) // Un seul credential actif par service par user
+  @@index([userId])
+  @@index([service])
+  @@index([isActive])
+  @@map("user_credentials")
+}
+
+enum CredentialService {
+  REDDIT        // Reddit API (clientId, clientSecret, refreshToken)
+  OPENAI        // OpenAI API (apiKey, organization)
+  STABILITY_AI  // Stability AI (apiKey)
+  ANTHROPIC     // Claude API (apiKey)
+  WEBHOOK       // Webhook générique (url, headers, auth)
+  N8N           // N8N API (apiKey, baseUrl)
+  CUSTOM        // Service personnalisé
+}

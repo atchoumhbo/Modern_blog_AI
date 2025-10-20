@@ -1,0 +1,109 @@
+{
+  "common": {
+    "siteName": "Modern Blog Leader",
+    "skipToContent": "Passer au contenu",
+    "home": "Accueil",
+    "blog": "Blog",
+    "projects": "Projets",
+    "about": "À propos",
+    "contact": "Contact",
+    "readMore": "Lire la suite",
+    "featured": "Featured",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "first": "Première",
+    "last": "Dernière"
+  },
+  "home": {
+    "featuresTitle": "Pourquoi choisir notre plateforme ?",
+    "featuresSubtitle": "Nous avons construit la plateforme de blogging la plus avancée, avec des fonctionnalités qui comptent.",
+    "heroTitle1": "Le futur du",
+    "heroTitle2": "Blogging",
+    "heroDesc": "Découvrez la plateforme ultime de blogging avec génération de contenu IA, design moderne, mode sombre intelligent et des performances de haut niveau.",
+    "exploreBlog": "Explorer le blog",
+    "viewProjects": "Voir les projets",
+    "latestPosts": "Derniers articles",
+    "latestPostsSubtitle": "Découvrez mes dernières réflexions, tutoriels et expériences en développement web",
+    "viewAllArticles": "Voir tous les articles",
+    "noPostsTitle": "Premiers articles en préparation",
+    "noPostsDesc": "Du contenu de qualité arrive bientôt !",
+  "freshContentTitle": "Du contenu frais régulièrement",
+    "latestProjects": "Derniers projets",
+    "latestProjectsTitle": "Projets récents",
+    "latestProjectsDesc": "Une sélection de projets récents avec stack, démos et code.",
+    "viewAll": "Tout voir",
+    "viewAllProjects": "Voir tous les projets",
+    "noProjectsDesc": "Aucun projet pour le moment. Créez-en dans Strapi.",
+    "ctaTitle": "Prêt à vivre le futur ?",
+    "ctaDesc": "Rejoignez des milliers de créateurs qui ont déjà adopté notre plateforme.",
+    "ctaPrimary": "Commencer la lecture",
+    "ctaSecondary": "Nous contacter",
+    "features": {
+      "lightning": {
+        "title": "Ultrarapide",
+        "desc": "Construit avec React Router v7 et optimisé pour la vitesse. Des temps de chargement sous la seconde."
+      },
+      "ai": {
+        "title": "Contenu propulsé par l'IA",
+        "desc": "Génération et curation de contenu intelligentes, propulsées par des algorithmes avancés."
+      },
+      "stack": {
+        "title": "Stack technologique moderne",
+        "desc": "Basé sur les dernières technologies : React Router v7, TypeScript, Tailwind CSS et Strapi."
+      },
+      "community": {
+        "title": "Porté par la communauté",
+        "desc": "Rejoignez des milliers de développeurs et d'auteurs dans notre communauté grandissante."
+      }
+    },
+    "stats": {
+      "activeUsers": "Utilisateurs actifs",
+      "articlesPublished": "Articles publiés",
+      "communityMembers": "Membres de la communauté",
+      "countriesReached": "Pays couverts"
+    }
+  },
+  "blog": {
+    "title": "Derniers Insights",
+    "subtitle": "Découvrez les derniers articles, tutoriels et insights sur le développement web moderne",
+    "featuredArticle": "Article Featured",
+    "noneTitle": "Aucun article pour le moment",
+    "noneDesc": "Les premiers articles arrivent bientôt !",
+    "more": "Plus d'articles",
+    "minutes": "min"
+  },
+  "projects": {
+    "title": "Derniers Projets",
+    "subtitle": "Une sélection de projets récents avec stack, démos et code.",
+    "noneTitle": "Aucun projet pour le moment",
+    "noneDesc": "Ajoutez vos premiers projets dans Strapi.",
+    "featuredProject": "Projet Featured",
+    "more": "Plus de projets",
+    "backToProjects": "Retour aux projets"
+  },
+  "about": {
+    "title": "À propos de Modern Blog Leader",
+    "intro": "Nous construisons le futur du blogging avec du contenu propulsé par l'IA, un design moderne et une expérience utilisateur exceptionnelle.",
+    "missionTitle": "Notre mission",
+    "missionDesc": "Créer la plateforme de blogging la plus avancée, simple d'utilisation et visuellement remarquable, qui donne du pouvoir aux créateurs et engage les lecteurs comme jamais auparavant.",
+    "stackTitle": "Stack technologique",
+    "stack": {
+      "frontend": "Frontend :",
+      "styling": "Style :",
+      "backend": "Backend :",
+      "ai": "Intégration IA :",
+      "aiDesc": "Génération de contenu multi-fournisseurs",
+      "deployment": "Déploiement :",
+      "deploymentDesc": "CI/CD moderne avec monitoring des performances"
+    }
+  },
+  "contact": {
+    "title": "Contactez moi",
+    "subtitle": "Nous serions ravis d'échanger avec vous. Envoyez-nous un message et nous vous répondrons au plus vite.",
+    "name": "Nom",
+    "email": "Email",
+    "subject": "Sujet",
+    "message": "Message",
+    "send": "Envoyer le message"
+  }
+}

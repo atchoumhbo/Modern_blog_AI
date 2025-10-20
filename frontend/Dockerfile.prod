@@ -1,0 +1,58 @@
+# Dockerfile Frontend - Production Multi-stage
+# Build React app et copie dans volume partagé avec Nginx
+
+# Stage 1: Build
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copier package.json et package-lock.json
+COPY package*.json ./
+
+# Installer les dépendances
+RUN npm ci --only=production=false
+
+# Copier le code source
+COPY . .
+
+# Arguments de build pour les variables d'environnement
+ARG VITE_BACKEND_TYPE=mern
+ARG VITE_API_URL=http://173.212.208.181/api
+ARG VITE_SITE_URL=http://173.212.208.181
+ARG NODE_ENV=production
+
+# Créer .env.production pour le build
+RUN echo "VITE_BACKEND_TYPE=${VITE_BACKEND_TYPE}" > .env.production && \
+    echo "VITE_API_URL=${VITE_API_URL}" >> .env.production && \
+    echo "VITE_SITE_URL=${VITE_SITE_URL}" >> .env.production && \
+    echo "NODE_ENV=${NODE_ENV}" >> .env.production
+
+# Build de production
+RUN npm run build
+
+# Vérifier que le build existe (React Router v7 génère build/ au lieu de dist/)
+RUN ls -la build/client/ || (echo "Build failed - build/client/ not found" && exit 1)
+
+# Stage 2: Production - Nginx pour servir les fichiers
+FROM nginx:1.25-alpine
+
+# Copier le build depuis le stage builder (React Router v7 utilise build/client)
+COPY --from=builder /app/build/client /usr/share/nginx/html
+
+# Copier la configuration Nginx simplifiée
+RUN echo 'server { \
+    listen 80; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

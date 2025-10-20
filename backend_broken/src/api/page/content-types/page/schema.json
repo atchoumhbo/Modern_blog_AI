@@ -1,0 +1,30 @@
+{
+  "kind": "collectionType",
+  "collectionName": "pages",
+  "info": {
+    "singularName": "page",
+    "pluralName": "pages",
+    "displayName": "Page"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "about_content": {
+      "type": "richtext"
+    },
+    "contact_email": {
+      "type": "email"
+    },
+    "social_media": {
+      "type": "json"
+    },
+    "skills": {
+      "type": "json"
+    },
+    "experience": {
+      "type": "json"
+    }
+  }
+}

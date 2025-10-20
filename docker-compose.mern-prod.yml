@@ -1,0 +1,90 @@
+# Docker Compose - PRODUCTION COMPLÈTE VPS
+# Frontend + Backend MERN + PostgreSQL + Nginx
+# Accès via IP: http://173.212.208.181
+
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: blog-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: blog_mern
+      POSTGRES_USER: blog_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-BlogSecurePass2024!}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    networks:
+      - blog-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blog_user -d blog_mern"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend MERN (Node.js + Express + Prisma)
+  backend:
+    build:
+      context: ./backend-mern
+      dockerfile: Dockerfile
+    container_name: blog-mern-backend-prod
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://blog_user:${DB_PASSWORD:-BlogSecurePass2024!}@postgres:5432/blog_mern?schema=public
+      JWT_SECRET: ${JWT_SECRET:-your_super_secret_jwt_key_change_in_production_minimum_32_characters}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_super_secret_refresh_key_change_in_production_min_32_chars}
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      CORS_ORIGINS: http://173.212.208.181,http://localhost:3001,http://localhost:5173
+      FRONTEND_URL: http://173.212.208.181
+    ports:
+      - "3001:3000"  # Exposer sur le port 3001 pour ne pas entrer en conflit avec l'ancien backend
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - blog-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend React (Nginx intégré)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        VITE_BACKEND_TYPE: mern
+        VITE_API_URL: http://173.212.208.181:3001/api
+        VITE_STRAPI_URL: http://173.212.208.181:3001
+        VITE_SITE_URL: http://173.212.208.181
+        NODE_ENV: production
+    container_name: blog-mern-frontend-prod
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    networks:
+      - blog-network
+    depends_on:
+      backend:
+        condition: service_healthy
+
+networks:
+  blog-network:
+    driver: bridge
+
+volumes:
+  postgres_prod_data:
+    driver: local
+  backend_uploads:
+    driver: local

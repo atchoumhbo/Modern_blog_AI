@@ -1,0 +1,92 @@
+# Configuration Docker pour PRODUCTION VPS - STRAPI + FRONTEND avec SQLite
+# Pas besoin de PostgreSQL ni Redis - tout en SQLite
+
+services:
+  # Backend Strapi (production avec SQLite)
+  strapi:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: blog-strapi-prod
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_CLIENT: sqlite
+      DATABASE_FILENAME: ./data/data.db
+      JWT_SECRET: ${JWT_SECRET:-production_jwt_secret_change_this_in_env_file_minimum_32_chars}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:-production_admin_jwt_secret_change_this_minimum_32_chars}
+      API_TOKEN_SALT: ${API_TOKEN_SALT:-production_api_token_salt_change_this_minimum_32_chars}
+      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT:-production_transfer_token_salt_change_this_32_chars}
+      APP_KEYS: ${APP_KEYS:-prod_key1_32chars,prod_key2_32chars,prod_key3_32chars,prod_key4_32chars}
+      HOST: 0.0.0.0
+      PORT: 1337
+      PUBLIC_URL: ${PUBLIC_URL:-https://yourdomain.com}  # Changez avec votre domaine
+      WEBHOOKS_POPULATE_RELATIONS: false
+    volumes:
+      - strapi_prod_uploads:/opt/app/public/uploads
+      - strapi_prod_data:/opt/app/data
+    networks:
+      - blog-prod-network
+    command: npm run start
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend React (production)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        VITE_STRAPI_URL: ${VITE_STRAPI_URL:-http://localhost:1337}
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:1337/api}
+        VITE_SITE_URL: ${VITE_SITE_URL:-https://yourdomain.com}
+        VITE_SITE_NAME: ${VITE_SITE_NAME:-Modern Blog Leader}
+        VITE_GA_MEASUREMENT_ID: ${VITE_GA_MEASUREMENT_ID:-}
+    container_name: blog-frontend-prod
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    networks:
+      - blog-prod-network
+    depends_on:
+      strapi:
+        condition: service_healthy
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: blog-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro  # Certificats SSL Let's Encrypt
+      - strapi_prod_uploads:/var/www/uploads:ro
+    networks:
+      - blog-prod-network
+    depends_on:
+      - strapi
+      - frontend
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  blog-prod-network:
+    driver: bridge
+
+volumes:
+  strapi_prod_uploads:
+    driver: local
+  strapi_prod_data:
+    driver: local

@@ -1,0 +1,119 @@
+{
+  "kind": "collectionType",
+  "collectionName": "articles",
+  "info": {
+    "singularName": "article",
+    "pluralName": "articles",
+    "displayName": "Article",
+    "description": "Content type optimisé pour un blog professionnel avec SEO complet"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {
+    "i18n": {
+      "localized": true
+    }
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "maxLength": 255,
+      "minLength": 10,
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      }
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true,
+      "unique": true
+    },
+    "content": {
+      "type": "richtext",
+      "required": true,
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      }
+    },
+    "excerpt": {
+      "type": "text",
+      "maxLength": 160,
+      "minLength": 20,
+      "description": "Résumé de l'article (160 caractères max pour les moteurs de recherche)",
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      }
+    },
+    "featured_image": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": ["images"],
+      "description": "Image mise en avant (1200x630px recommandé)"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["draft", "published", "scheduled"],
+      "default": "draft",
+      "required": true
+    },
+    "seo": {
+      "type": "component",
+      "repeatable": false,
+      "component": "seo.seo-data"
+    },
+    "category": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::category.category",
+      "inversedBy": "articles"
+    },
+    "tags": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::tag.tag",
+      "inversedBy": "articles"
+    },
+    "author": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "readingTime": {
+      "type": "integer",
+      "min": 1,
+      "default": 5,
+      "description": "Temps de lecture estimé en minutes"
+    },
+    "viewCount": {
+      "type": "integer",
+      "min": 0,
+      "default": 0,
+      "description": "Nombre de vues de l'article"
+    },
+    "publishedAt": {
+      "type": "datetime",
+      "description": "Date de publication prévue ou effective"
+    },
+    "schema": {
+      "type": "component",
+      "repeatable": false,
+      "component": "schema.structured-data"
+    },
+    "language": {
+      "type": "enumeration",
+      "enum": ["fr", "en"],
+      "default": "fr",
+      "required": false,
+      "description": "Langue de l'article (fr/en) - sera obligatoire après migration"
+    }
+  }
+}

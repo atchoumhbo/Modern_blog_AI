@@ -1,0 +1,111 @@
+# Docker Compose - PRODUCTION HTTPS avec domaine
+# Frontend React Router v7 + Backend MERN + PostgreSQL + Nginx + SSL
+# Domaine: blog.bh-systems.be
+
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: blog-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: blog_mern
+      POSTGRES_USER: blog_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-BlogSecurePass2024!}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    networks:
+      - blog-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blog_user -d blog_mern"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend MERN (Node.js + Express + Prisma)
+  backend:
+    build:
+      context: ./backend-mern
+      dockerfile: Dockerfile
+    container_name: blog-mern-backend-https
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://blog_user:${DB_PASSWORD:-BlogSecurePass2024!}@postgres:5432/blog_mern?schema=public
+      JWT_SECRET: ${JWT_SECRET:-your_super_secret_jwt_key_change_in_production_minimum_32_characters}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_super_secret_refresh_key_change_in_production_min_32_chars}
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      CORS_ORIGINS: https://blog.bh-systems.be,http://localhost:5173
+      FRONTEND_URL: https://blog.bh-systems.be
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - blog-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend React Router v7
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        VITE_BACKEND_TYPE: mern
+        VITE_API_URL: https://blog.bh-systems.be/api
+        VITE_STRAPI_URL: https://blog.bh-systems.be
+        VITE_SITE_URL: https://blog.bh-systems.be
+        VITE_SITE_NAME: Modern Blog Leader
+        NODE_ENV: production
+    container_name: blog-frontend-https
+    restart: unless-stopped
+    networks:
+      - blog-network
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # Nginx - Reverse Proxy avec SSL
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: blog-nginx-https
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/blog.bh-systems.be.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+      - backend_uploads:/var/www/uploads:ro
+    networks:
+      - blog-network
+    depends_on:
+      - backend
+      - frontend
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  blog-network:
+    driver: bridge
+
+volumes:
+  postgres_prod_data:
+    driver: local
+  backend_uploads:
+    driver: local

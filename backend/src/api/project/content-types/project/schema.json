@@ -1,0 +1,198 @@
+{
+  "kind": "collectionType",
+  "collectionName": "projects",
+  "info": {
+    "singularName": "project",
+    "pluralName": "projects",
+    "displayName": "Project",
+    "description": "Content type pour les projets avec SEO optimisé et portfolio professionnel"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {
+    "i18n": {
+      "localized": true
+    }
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "maxLength": 255,
+      "minLength": 5,
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      }
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true,
+      "unique": true
+    },
+    "description": {
+      "type": "richtext",
+      "required": true,
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      }
+    },
+    "excerpt": {
+      "type": "text",
+      "maxLength": 200,
+      "minLength": 20,
+      "description": "Résumé court du projet (200 caractères max)",
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      }
+    },
+    "featured_image": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": ["images"],
+      "description": "Image principale du projet (1200x630px recommandé)"
+    },
+    "gallery": {
+      "type": "media",
+      "multiple": true,
+      "allowedTypes": ["images"],
+      "description": "Galerie d'images du projet"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["draft", "in-progress", "completed", "archived"],
+      "default": "draft",
+      "required": true
+    },
+    "project_type": {
+      "type": "enumeration",
+      "enum": ["web-app", "mobile-app", "api", "library", "tool", "website", "other"],
+      "default": "web-app",
+      "required": true
+    },
+    "technologies": {
+      "type": "json",
+      "description": "Liste des technologies utilisées (ex: ['React', 'Node.js', 'MongoDB'])"
+    },
+    "github_url": {
+      "type": "string",
+      "regex": "^https://github\\.com/.+"
+    },
+    "live_url": {
+      "type": "string",
+      "regex": "^https?:\\/\\/.+"
+    },
+    "demo_url": {
+      "type": "string",
+      "regex": "^https?:\\/\\/.+"
+    },
+    "start_date": {
+      "type": "date"
+    },
+    "end_date": {
+      "type": "date"
+    },
+    "client": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Nom du client ou organisation"
+    },
+    "team_size": {
+      "type": "integer",
+      "min": 1,
+      "default": 1,
+      "description": "Taille de l'équipe"
+    },
+    "role": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Votre rôle dans le projet"
+    },
+    "challenges": {
+      "type": "text",
+      "description": "Défis techniques rencontrés",
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      }
+    },
+    "achievements": {
+      "type": "text",
+      "description": "Réalisations et résultats obtenus",
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      }
+    },
+    "lessons_learned": {
+      "type": "text",
+      "description": "Leçons apprises",
+      "pluginOptions": {
+        "i18n": {
+          "localized": true
+        }
+      }
+    },
+    "featured": {
+      "type": "boolean",
+      "default": false,
+      "description": "Projet mis en avant sur le portfolio"
+    },
+    "priority": {
+      "type": "integer",
+      "min": 1,
+      "max": 10,
+      "default": 5,
+      "description": "Priorité d'affichage (1-10)"
+    },
+    "viewCount": {
+      "type": "integer",
+      "min": 0,
+      "default": 0,
+      "description": "Nombre de vues du projet"
+    },
+    "seo": {
+      "type": "component",
+      "repeatable": false,
+      "component": "seo.seo-data"
+    },
+    "category": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::category.category",
+      "inversedBy": "projects"
+    },
+    "tags": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::tag.tag",
+      "inversedBy": "projects"
+    },
+    "author": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "schema": {
+      "type": "component",
+      "repeatable": false,
+      "component": "schema.structured-data"
+    },
+    "language": {
+      "type": "enumeration",
+      "enum": ["fr", "en"],
+      "default": "fr",
+      "required": false,
+      "description": "Langue du projet (fr/en) - sera obligatoire après migration"
+    }
+  }
+}
