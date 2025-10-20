@@ -1,76 +1,91 @@
 version: '3.8'
 
-# Configuration Docker pour production - STRAPI + FRONTEND avec SQLite
-# Utilise les secrets de production sécurisés
-
 services:
-  # Backend Strapi (production avec SQLite)
-  strapi:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: production
-    container_name: blog-strapi-prod
+  postgres:
+    image: postgres:16-alpine
+    container_name: blog-postgres-prod
     restart: unless-stopped
-    env_file:
-      - .env.production
+    environment:
+      POSTGRES_DB: blog_mern
+      POSTGRES_USER: blog_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-BlogSecurePass2024!}
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - strapi_prod_uploads:/opt/app/public/uploads
-      - strapi_prod_data:/opt/app/data
-      # Pas de montage du code source en production
-    ports:
-      - "1339:1337"  # Port externe 1339 pour éviter conflits
+      - postgres_prod_data:/var/lib/postgresql/data
     networks:
-      - blog-prod-network
+      - blog-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+      test: ["CMD-SHELL", "pg_isready -U blog_user -d blog_mern"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Frontend React (production)
-  frontend:
+  backend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev  # Utilise le même Dockerfile pour l'instant
-      args:
-        # Variables build-time - à adapter selon ton domaine
-        VITE_STRAPI_URL: http://localhost:1339
-        VITE_API_URL: http://localhost:1339/api
-        VITE_SITE_URL: http://localhost:5173
-        VITE_SITE_NAME: Modern Blog Leader - Production
-        VITE_GA_MEASUREMENT_ID: ""
-    container_name: blog-frontend-prod
+      context: ./backend-mern
+      dockerfile: Dockerfile
+    container_name: blog-mern-backend-prod
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 5173
-      DOCKER: "true"
-      # Variables runtime
-      VITE_STRAPI_URL: http://strapi:1337
-      VITE_API_URL: http://strapi:1337/api
-    # Pas de volumes en production
+      PORT: 3000
+      DATABASE_URL: postgresql://blog_user:${DB_PASSWORD:-BlogSecurePass2024!}@postgres:5432/blog_mern?schema=public
+      JWT_SECRET: ${JWT_SECRET:-your_super_secret_jwt_key_change_in_production_minimum_32_characters}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_super_secret_refresh_key_change_in_production_min_32_chars}
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      FRONTEND_URL: http://frontend
+      CORS_ORIGINS: http://frontend,http://localhost:8080
     ports:
-      - "5173:5173"
+      - "3001:3000"
+    volumes:
+      - backend_uploads:/app/uploads
     networks:
-      - blog-prod-network
+      - blog-network
     depends_on:
-      strapi:
+      postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        VITE_BACKEND_TYPE: mern
+        VITE_API_URL: http://backend:3000/api
+        VITE_BACKEND_URL_SERVER: http://backend:3000
+        VITE_SITE_URL: http://localhost:8080
+        VITE_SITE_NAME: "Modern Blog Leader"
+        VITE_LOCALES: fr,en
+        VITE_DEFAULT_LOCALE: fr
+        NODE_ENV: production
+    container_name: blog-mern-frontend-prod
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    networks:
+      - blog-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
-  blog-prod-network:
+  blog-network:
     driver: bridge
 
 volumes:
-  strapi_prod_uploads:
-    name: blog_strapi_prod_uploads
-  strapi_prod_data:
-    name: blog_strapi_prod_data
+  postgres_prod_data:
+    driver: local
+  backend_uploads:
+    driver: local

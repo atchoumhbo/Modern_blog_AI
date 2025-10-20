@@ -1,91 +1,96 @@
 version: '3.8'
 
-# Configuration Docker pour développement local - STRAPI + FRONTEND seulement
-# Strapi utilise SQLite, pas besoin de PostgreSQL ni Redis
-
+# Stack de développement MERN : PostgreSQL + Backend Express + Frontend React Router
 services:
-  # Backend Strapi (dans un container Docker avec SQLite)
-  strapi:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
-    container_name: blog-strapi-dev
+  postgres:
+    image: postgres:16-alpine
+    container_name: blog-postgres-dev
     restart: unless-stopped
     environment:
-      NODE_ENV: development
-      DATABASE_CLIENT: sqlite
-      DATABASE_FILENAME: ./data/data.db
-      JWT_SECRET: docker_dev_jwt_secret_minimum_32_characters_long_for_development
-      ADMIN_JWT_SECRET: docker_dev_admin_jwt_secret_minimum_32_characters_for_dev
-      API_TOKEN_SALT: docker_dev_api_token_salt_minimum_32_characters_for_dev
-      TRANSFER_TOKEN_SALT: docker_dev_transfer_token_salt_minimum_32_characters
-      APP_KEYS: docker_dev_key1_minimum_32_chars,docker_dev_key2_minimum_32_chars,docker_dev_key3_minimum_32_chars,docker_dev_key4_minimum_32_chars
-      HOST: 0.0.0.0
-      PORT: 1337
-      PUBLIC_URL: http://localhost:1339  # URL publique pour les médias
-      WEBHOOKS_POPULATE_RELATIONS: false
+      POSTGRES_DB: blog_mern_dev
+      POSTGRES_USER: blog_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-BlogDevPass2024!}
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - strapi_dev_uploads:/opt/app/public/uploads
-      - strapi_dev_data:/opt/app/data
-      - ./backend:/opt/app  # Montage du code source pour le développement
-      - /opt/app/node_modules  # Exclure node_modules du montage
+      - postgres_dev_data:/var/lib/postgresql/data
     ports:
-      - "1339:1337"  # Port Docker différent du développement local
+      - "5432:5432"
     networks:
       - blog-dev-network
-    # Pas de dépendances - utilise SQLite local
-    command: npm run develop  # Mode développement Strapi
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "pg_isready -U blog_user -d blog_mern_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Frontend React (dans un container Docker)
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-      args:
-        VITE_STRAPI_URL: http://localhost:1339  # Client-side URL (browser)
-        VITE_STRAPI_URL_SERVER: http://strapi:1337  # Server-side URL (SSR inside Docker)
-        VITE_API_URL: http://localhost:1339/api
-        VITE_SITE_URL: http://localhost:5173
-        VITE_SITE_NAME: Modern Blog Leader - Docker Dev
-        VITE_GA_MEASUREMENT_ID: ""
-    container_name: blog-frontend-dev
+  backend:
+    image: node:20-alpine
+    container_name: blog-mern-backend-dev
+    working_dir: /app
     restart: unless-stopped
     environment:
       NODE_ENV: development
-      PORT: 5173
-      DOCKER: "true"
-      VITE_STRAPI_URL: http://localhost:1339  # Client-side URL (browser)
-      VITE_STRAPI_URL_SERVER: http://strapi:1337  # Server-side URL (SSR inside Docker)
-      VITE_API_URL: http://localhost:1339/api
-      VITE_SITE_URL: http://localhost:5173
-      HOST: 0.0.0.0
+      PORT: 3000
+      DATABASE_URL: postgresql://blog_user:${DB_PASSWORD:-BlogDevPass2024!}@postgres:5432/blog_mern_dev?schema=public
+      JWT_SECRET: dev_jwt_secret_change_me_minimum_32_characters
+      JWT_REFRESH_SECRET: dev_refresh_secret_change_me_minimum_32_characters
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      FRONTEND_URL: http://localhost:5173
+      CORS_ORIGINS: http://localhost:5173
+    command: sh -c "npm install && npx prisma generate && npm run dev"
     volumes:
-      - ./frontend:/app  # Montage du code source pour le développement
-      - /app/node_modules  # Exclure node_modules du montage
+      - ./backend-mern:/app
     ports:
-      - "5173:5173"  # Port standard Vite
+      - "3000:3000"
     networks:
       - blog-dev-network
     depends_on:
-      strapi:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 50s
+
+  frontend:
+    image: node:20-alpine
+    container_name: blog-mern-frontend-dev
+    working_dir: /app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      PORT: 5173
+      VITE_BACKEND_TYPE: mern
+      VITE_API_URL: http://localhost:3000/api
+      VITE_BACKEND_URL_SERVER: http://backend:3000
+      VITE_SITE_URL: http://localhost:5173
+      VITE_SITE_NAME: "Modern Blog Leader (Dev)"
+      VITE_LOCALES: fr,en
+      VITE_DEFAULT_LOCALE: fr
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    networks:
+      - blog-dev-network
+    depends_on:
+      backend:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5173"]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
 
 networks:
   blog-dev-network:
     driver: bridge
 
 volumes:
-  strapi_dev_uploads:
-    name: blog_strapi_dev_uploads
-  strapi_dev_data:
-    name: blog_strapi_dev_data
+  postgres_dev_data:
+    driver: local

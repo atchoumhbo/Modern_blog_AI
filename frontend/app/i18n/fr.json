@@ -33,7 +33,7 @@
     "latestProjectsDesc": "Une sélection de projets récents avec stack, démos et code.",
     "viewAll": "Tout voir",
     "viewAllProjects": "Voir tous les projets",
-    "noProjectsDesc": "Aucun projet pour le moment. Créez-en dans Strapi.",
+    "noProjectsDesc": "Aucun projet pour le moment. Connectez l'API MERN pour en créer.",
     "ctaTitle": "Prêt à vivre le futur ?",
     "ctaDesc": "Rejoignez des milliers de créateurs qui ont déjà adopté notre plateforme.",
     "ctaPrimary": "Commencer la lecture",
@@ -49,7 +49,7 @@
       },
       "stack": {
         "title": "Stack technologique moderne",
-        "desc": "Basé sur les dernières technologies : React Router v7, TypeScript, Tailwind CSS et Strapi."
+        "desc": "Basé sur les dernières technologies : React Router v7, TypeScript, Tailwind CSS et une API MERN sécurisée."
       },
       "community": {
         "title": "Porté par la communauté",
@@ -76,7 +76,7 @@
     "title": "Derniers Projets",
     "subtitle": "Une sélection de projets récents avec stack, démos et code.",
     "noneTitle": "Aucun projet pour le moment",
-    "noneDesc": "Ajoutez vos premiers projets dans Strapi.",
+    "noneDesc": "Ajoutez vos premiers projets depuis le dashboard MERN.",
     "featuredProject": "Projet Featured",
     "more": "Plus de projets",
     "backToProjects": "Retour aux projets"

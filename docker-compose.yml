@@ -1,198 +1,93 @@
-services:
-  # Base de données PostgreSQL (DÉSACTIVÉ - On utilise SQLite)
-  # postgres:
-  #   image: postgres:15-alpine
-  #   container_name: blog-postgres
-  #   restart: unless-stopped
-  #   environment:
-  #     POSTGRES_DB: ${DATABASE_NAME:-blog_strapi}
-  #     POSTGRES_USER: ${DATABASE_USERNAME:-strapi}
-  #     POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-changeme}
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #     - ./database/init:/docker-entrypoint-initdb.d
-  #   ports:
-  #     - "5432:5432"
-  #   networks:
-  #     - blog-network
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME:-strapi}"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
+version: '3.8'
 
-  # Redis pour le cache et les sessions
-  redis:
-    image: redis:7-alpine
-    container_name: blog-redis
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: blog-postgres-local
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-changeme}
+    environment:
+      POSTGRES_DB: blog_mern
+      POSTGRES_USER: blog_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-BlogLocalPass2024!}
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - redis_data:/data
-    # ports:  # DÉSACTIVÉ - Redis non exposé publiquement
-    #   - "6379:6379"
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     networks:
       - blog-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "pg_isready -U blog_user -d blog_mern"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Backend Strapi
-  strapi:
+  backend:
     build:
-      context: ./backend
+      context: ./backend-mern
       dockerfile: Dockerfile
-      target: production
-    container_name: blog-strapi
-    restart: unless-stopped
-    environment:
-      NODE_ENV: production
-      DATABASE_CLIENT: sqlite
-      DATABASE_FILENAME: ./data/data.db
-      JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-here}
-      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:-your-admin-jwt-secret-here}
-      API_TOKEN_SALT: ${API_TOKEN_SALT:-your-api-token-salt-here}
-      APP_KEYS: ${APP_KEYS:-key1,key2,key3,key4}
-      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT:-your-transfer-token-salt}
-      HOST: 0.0.0.0
-      PORT: 1337
-      # Redis configuration
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-changeme}
-      # Upload configuration
-      UPLOAD_PROVIDER: local
-      # Email configuration (optionnel)
-      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-}
-      EMAIL_PROVIDER_OPTIONS: ${EMAIL_PROVIDER_OPTIONS:-}
-    volumes:
-      - strapi_uploads:/opt/app/public/uploads
-      - strapi_data:/opt/app/data
-    ports:  # TEMPORAIRE - Pour créer super admin
-      - "1337:1337"
-    networks:
-      - blog-network
-    depends_on:
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Frontend React
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: production
-      args:
-        VITE_STRAPI_URL: ${VITE_STRAPI_URL:-http://localhost:1337}
-        VITE_GA_MEASUREMENT_ID: ${VITE_GA_MEASUREMENT_ID:-}
-        VITE_SITE_URL: ${VITE_SITE_URL:-http://localhost:3000}
-        VITE_SITE_NAME: ${VITE_SITE_NAME:-Modern Blog Leader}
-    container_name: blog-frontend
+    container_name: blog-mern-backend-local
     restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: 3000
-    # ports:  # DÉSACTIVÉ - Frontend non exposé publiquement, seulement via nginx
-    #   - "3000:3000"
+      DATABASE_URL: postgresql://blog_user:${DB_PASSWORD:-BlogLocalPass2024!}@postgres:5432/blog_mern?schema=public
+      JWT_SECRET: ${JWT_SECRET:-local_dev_jwt_secret_change_this_minimum_32_chars}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-local_dev_refresh_secret_change_this_minimum_32_chars}
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      FRONTEND_URL: http://localhost:8080
+      CORS_ORIGINS: http://localhost:8080,http://localhost:3001
+    ports:
+      - "3000:3000"
+    volumes:
+      - backend_uploads:/app/uploads
     networks:
       - blog-network
     depends_on:
-      strapi:
+      postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
 
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    container_name: blog-nginx
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        VITE_BACKEND_TYPE: mern
+        VITE_API_URL: http://backend:3000/api
+        VITE_BACKEND_URL_SERVER: http://backend:3000
+        VITE_SITE_URL: http://localhost:8080
+        VITE_SITE_NAME: "Modern Blog Leader"
+        VITE_LOCALES: fr,en
+        VITE_DEFAULT_LOCALE: fr
+        NODE_ENV: production
+    container_name: blog-mern-frontend-local
     restart: unless-stopped
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro  # Certificats SSL Let's Encrypt
-      - nginx_logs:/var/log/nginx
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
     networks:
       - blog-network
     depends_on:
-      - frontend
-      - strapi
+      backend:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost"]
       interval: 30s
       timeout: 10s
       retries: 3
-
-  # Monitoring avec Prometheus (optionnel)
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: blog-prometheus
-    restart: unless-stopped
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
-    volumes:
-      - ./monitoring/prometheus:/etc/prometheus
-      - prometheus_data:/prometheus
-    ports:
-      - "9090:9090"
-    networks:
-      - blog-network
-    profiles:
-      - monitoring
-
-  # Grafana pour les dashboards (optionnel)
-  grafana:
-    image: grafana/grafana:latest
-    container_name: blog-grafana
-    restart: unless-stopped
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-changeme}
-      GF_USERS_ALLOW_SIGN_UP: false
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-    ports:
-      - "3001:3000"
-    networks:
-      - blog-network
-    profiles:
-      - monitoring
-
-volumes:
-  # postgres_data:  # DÉSACTIVÉ - On utilise SQLite
-  #   driver: local
-  redis_data:
-    driver: local
-  strapi_uploads:
-    driver: local
-  strapi_data:
-    driver: local
-  nginx_logs:
-    driver: local
-  prometheus_data:
-    driver: local
-  grafana_data:
-    driver: local
 
 networks:
   blog-network:
     driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  backend_uploads:
+    driver: local

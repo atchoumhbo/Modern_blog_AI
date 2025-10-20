@@ -65,20 +65,22 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.ssr
+      args:
+        VITE_BACKEND_TYPE: mern
+        VITE_API_URL: https://blog.bh-systems.be/api
+        VITE_BACKEND_URL_SERVER: http://backend:3000
+        VITE_SITE_URL: https://blog.bh-systems.be
+        NODE_ENV: production
     container_name: blog-frontend
     restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: 3000
-      # Backend type
       VITE_BACKEND_TYPE: mern
-      # API URLs
       VITE_API_URL: https://blog.bh-systems.be/api
-      VITE_BACKEND_URL_SERVER: http://blog-backend:3000
-      # Site URLs
+      VITE_BACKEND_URL_SERVER: http://backend:3000
       VITE_SITE_URL: https://blog.bh-systems.be
-      VITE_STRAPI_URL: https://blog.bh-systems.be
-      # i18n
+      VITE_SITE_NAME: "Modern Blog Leader"
       VITE_LOCALES: fr,en
       VITE_DEFAULT_LOCALE: fr
     ports:

@@ -19,8 +19,8 @@ router.get('/generate/:executionId/status', authenticateJWT, ArticleGeneratorCon
 
 // Public routes (GET - lecture seule)
 router.get('/', getArticles);
-router.get('/:id', getArticleById);
 router.get('/slug/:slug', getArticleBySlug);
+router.get('/:id', getArticleById);
 
 // Protected routes (require JWT or API Key)
 router.post('/', authenticateHybrid, requireWritePermission, createArticle);

@@ -16,7 +16,10 @@ export const getArticles = async (req: Request, res: Response) => {
       tag = '',
       status = '',
       sort = 'publishedAt',
-      order = 'desc'
+      order = 'desc',
+      slug = '',
+      publishedAfter = '',
+      publishedBefore = ''
     } = req.query;
 
     const pageNum = parseInt(page as string);
@@ -55,13 +58,33 @@ export const getArticles = async (req: Request, res: Response) => {
       where.isPublished = false;
     }
 
+    // Filter by specific slug
+    if (slug) {
+      where.slug = slug as string;
+    }
+
+    // Filter by publication date range
+    if (publishedAfter || publishedBefore) {
+      where.publishedAt = {};
+      if (publishedAfter) {
+        (where.publishedAt as any).gte = new Date(publishedAfter as string);
+      }
+      if (publishedBefore) {
+        (where.publishedAt as any).lte = new Date(publishedBefore as string);
+      }
+      // Ensure only published content is returned when filtering by date
+      if (typeof where.isPublished === 'undefined') {
+        where.isPublished = true;
+      }
+    }
+
     // Build orderBy - only use direct fields from Article table
     const orderBy: any = {};
     const sortField = sort as string;
     const sortOrder = (order as string) as 'asc' | 'desc';
 
     // Only allow sorting by direct Article fields to avoid Prisma errors
-    const allowedSortFields = ['publishedAt', 'createdAt', 'updatedAt', 'title', 'views'];
+    const allowedSortFields = ['publishedAt', 'createdAt', 'updatedAt', 'title', 'viewCount'];
     if (allowedSortFields.includes(sortField)) {
       orderBy[sortField] = sortOrder;
     } else {

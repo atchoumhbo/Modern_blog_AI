@@ -58,7 +58,7 @@ export default function About() {
             <ul>
               <li><strong>{t("about.stack.frontend", "Frontend:")}</strong> React Router v7, TypeScript</li>
               <li><strong>{t("about.stack.styling", "Styling:")}</strong> Tailwind CSS</li>
-              <li><strong>{t("about.stack.backend", "Backend:")}</strong> Strapi CMS (PostgreSQL)</li>
+              <li><strong>{t("about.stack.backend", "Backend:")}</strong> MERN API (Express + Prisma + PostgreSQL)</li>
               <li><strong>{t("about.stack.ai", "AI Integration:")}</strong> {t("about.stack.aiDesc", "Multi-provider AI content generation")}</li>
               <li><strong>{t("about.stack.deployment", "Deployment:")}</strong> {t("about.stack.deploymentDesc", "Modern CI/CD with performance monitoring")}</li>
             </ul>

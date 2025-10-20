@@ -1,43 +1,26 @@
 /**
  * Configuration de l'API Backend
- * Supporte Strapi v5 ET Backend MERN
+ * Configuration MERN unifiée (Strapi legacy supprimé)
  */
 
 // Type du backend utilisé
-export type BackendType = 'strapi' | 'mern';
+export type BackendType = 'mern';
 
-// Détection automatique du backend (via variable d'environnement Vite)
-export const BACKEND_TYPE: BackendType = 
-  (import.meta.env.VITE_BACKEND_TYPE as BackendType) || 'mern';
+// Détection du backend (legacy env conservée pour compatibilité)
+export const BACKEND_TYPE: BackendType = 'mern';
 
-// Configuration selon le backend
-const BACKEND_CONFIG = {
-  strapi: {
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:1337/api',
-    authEndpoints: {
-      register: '/auth/local/register',
-      login: '/auth/local',
-      refresh: '/auth/refresh',
-      me: '/users/me',
-      forgotPassword: '/auth/forgot-password',
-      resetPassword: '/auth/reset-password',
-    },
+// Configuration MERN
+const API_CONFIG = {
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  authEndpoints: {
+    register: '/auth/register',
+    login: '/auth/login',
+    refresh: '/auth/refresh',
+    me: '/auth/me',
+    logout: '/auth/logout',
+    changePassword: '/auth/change-password',
   },
-  mern: {
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
-    authEndpoints: {
-      register: '/auth/register',
-      login: '/auth/login',
-      refresh: '/auth/refresh',
-      me: '/auth/me',
-      logout: '/auth/logout',
-      changePassword: '/auth/change-password',
-    },
-  },
-};
-
-// Export de la configuration active
-export const API_CONFIG = BACKEND_CONFIG[BACKEND_TYPE];
+} as const;
 
 // Endpoints communs (compatibles Strapi et MERN)
 export const API_ENDPOINTS = {

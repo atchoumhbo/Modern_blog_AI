@@ -59,7 +59,7 @@ export const getProjects = async (req: Request, res: Response) => {
     const sortOrder = (order as string) as 'asc' | 'desc';
 
     // Only allow sorting by direct Project fields
-    const allowedSortFields = ['createdAt', 'updatedAt', 'title', 'status'];
+    const allowedSortFields = ['createdAt', 'updatedAt', 'title', 'status', 'publishedAt', 'viewCount'];
     if (allowedSortFields.includes(sortField)) {
       orderBy[sortField] = sortOrder;
     } else {

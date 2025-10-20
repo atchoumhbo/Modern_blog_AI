@@ -52,7 +52,7 @@ const features = [
     key: "stack",
     icon: Code,
     defaultTitle: "Modern Tech Stack",
-    defaultDesc: "Built with the latest technologies: React Router v7, TypeScript, Tailwind CSS, and Strapi.",
+    defaultDesc: "Built with the latest technologies: React Router v7, TypeScript, Tailwind CSS, and a secure MERN API.",
   },
   {
     key: "community",

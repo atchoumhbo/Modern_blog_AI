@@ -1,92 +1,91 @@
-# Configuration Docker pour PRODUCTION VPS - STRAPI + FRONTEND avec SQLite
-# Pas besoin de PostgreSQL ni Redis - tout en SQLite
+version: '3.8'
 
 services:
-  # Backend Strapi (production avec SQLite)
-  strapi:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: production
-    container_name: blog-strapi-prod
+  postgres:
+    image: postgres:16-alpine
+    container_name: blog-postgres
     restart: unless-stopped
     environment:
-      NODE_ENV: production
-      DATABASE_CLIENT: sqlite
-      DATABASE_FILENAME: ./data/data.db
-      JWT_SECRET: ${JWT_SECRET:-production_jwt_secret_change_this_in_env_file_minimum_32_chars}
-      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:-production_admin_jwt_secret_change_this_minimum_32_chars}
-      API_TOKEN_SALT: ${API_TOKEN_SALT:-production_api_token_salt_change_this_minimum_32_chars}
-      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT:-production_transfer_token_salt_change_this_32_chars}
-      APP_KEYS: ${APP_KEYS:-prod_key1_32chars,prod_key2_32chars,prod_key3_32chars,prod_key4_32chars}
-      HOST: 0.0.0.0
-      PORT: 1337
-      PUBLIC_URL: ${PUBLIC_URL:-https://yourdomain.com}  # Changez avec votre domaine
-      WEBHOOKS_POPULATE_RELATIONS: false
+      POSTGRES_DB: blog_mern
+      POSTGRES_USER: blog_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-BlogSecurePass2024!}
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - strapi_prod_uploads:/opt/app/public/uploads
-      - strapi_prod_data:/opt/app/data
+      - postgres_data:/var/lib/postgresql/data
     networks:
-      - blog-prod-network
-    command: npm run start
+      - blog-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "pg_isready -U blog_user -d blog_mern"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Frontend React (production)
-  frontend:
+  backend:
     build:
-      context: ./frontend
+      context: ./backend-mern
       dockerfile: Dockerfile
-      target: production
-      args:
-        VITE_STRAPI_URL: ${VITE_STRAPI_URL:-http://localhost:1337}
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:1337/api}
-        VITE_SITE_URL: ${VITE_SITE_URL:-https://yourdomain.com}
-        VITE_SITE_NAME: ${VITE_SITE_NAME:-Modern Blog Leader}
-        VITE_GA_MEASUREMENT_ID: ${VITE_GA_MEASUREMENT_ID:-}
-    container_name: blog-frontend-prod
+    container_name: blog-mern-backend
     restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: 3000
+      DATABASE_URL: postgresql://blog_user:${DB_PASSWORD:-BlogSecurePass2024!}@postgres:5432/blog_mern?schema=public
+      JWT_SECRET: ${JWT_SECRET:-your_super_secret_jwt_key_change_in_production_minimum_32_characters}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your_super_secret_refresh_key_change_in_production_min_32_chars}
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      FRONTEND_URL: http://frontend
+      CORS_ORIGINS: http://frontend,http://localhost:8080
+    ports:
+      - "3001:3000"
+    volumes:
+      - backend_uploads:/app/uploads
     networks:
-      - blog-prod-network
+      - blog-network
     depends_on:
-      strapi:
+      postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  # Nginx reverse proxy
-  nginx:
-    image: nginx:alpine
-    container_name: blog-nginx-prod
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        VITE_BACKEND_TYPE: mern
+        VITE_API_URL: http://backend:3000/api
+        VITE_BACKEND_URL_SERVER: http://backend:3000
+        VITE_SITE_URL: http://localhost:8080
+        VITE_SITE_NAME: "Modern Blog Leader"
+        VITE_LOCALES: fr,en
+        VITE_DEFAULT_LOCALE: fr
+        NODE_ENV: production
+    container_name: blog-mern-frontend
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro  # Certificats SSL Let's Encrypt
-      - strapi_prod_uploads:/var/www/uploads:ro
+      - "8080:80"
     networks:
-      - blog-prod-network
+      - blog-network
     depends_on:
-      - strapi
-      - frontend
+      backend:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "nginx", "-t"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost"]
       interval: 30s
       timeout: 10s
       retries: 3
 
 networks:
-  blog-prod-network:
+  blog-network:
     driver: bridge
 
 volumes:
-  strapi_prod_uploads:
+  postgres_data:
     driver: local
-  strapi_prod_data:
+  backend_uploads:
     driver: local

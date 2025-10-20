@@ -13,12 +13,14 @@ COPY . .
 # Build arguments for environment variables
 ARG VITE_BACKEND_TYPE=mern
 ARG VITE_API_URL=https://blog.bh-systems.be/api
+ARG VITE_BACKEND_URL_SERVER=http://backend:3000
 ARG VITE_SITE_URL=https://blog.bh-systems.be
 ARG NODE_ENV=production
 
 # Set environment variables for build
 ENV VITE_BACKEND_TYPE=${VITE_BACKEND_TYPE}
 ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_BACKEND_URL_SERVER=${VITE_BACKEND_URL_SERVER}
 ENV VITE_SITE_URL=${VITE_SITE_URL}
 ENV NODE_ENV=${NODE_ENV}
 

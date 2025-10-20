@@ -66,8 +66,11 @@ services:
       args:
         VITE_BACKEND_TYPE: mern
         VITE_API_URL: http://173.212.208.181:3001/api
-        VITE_STRAPI_URL: http://173.212.208.181:3001
+        VITE_BACKEND_URL_SERVER: http://backend:3000
         VITE_SITE_URL: http://173.212.208.181
+        VITE_SITE_NAME: "Modern Blog Leader"
+        VITE_LOCALES: fr,en
+        VITE_DEFAULT_LOCALE: fr
         NODE_ENV: production
     container_name: blog-mern-frontend-prod
     restart: unless-stopped
