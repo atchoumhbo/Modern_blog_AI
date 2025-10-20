@@ -4,72 +4,91 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
-    container_name: strapi_postgres
+    container_name: blog_postgres_simple
     restart: unless-stopped
     environment:
-      POSTGRES_USER: strapi_admin
-      POSTGRES_PASSWORD: Password123!
-      POSTGRES_DB: strapi_db
+      POSTGRES_USER: blog_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-SimplePass2024!}
+      POSTGRES_DB: blog_mern
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - strapi_network
+      - blog_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U strapi_admin -d strapi_db"]
+      test: ["CMD-SHELL", "pg_isready -U blog_user -d blog_mern"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Strapi Backend
-  strapi:
+  # MERN Backend
+  backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.prod
-    container_name: strapi_backend
+      context: ./backend-mern
+      dockerfile: Dockerfile
+    container_name: blog_backend_simple
     restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://blog_user:${DB_PASSWORD:-SimplePass2024!}@postgres:5432/blog_mern?schema=public
+      JWT_SECRET: ${JWT_SECRET:-simple_stack_jwt_secret_minimum_32_chars}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-simple_stack_refresh_secret_minimum_32_chars}
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      FRONTEND_URL: http://localhost:8080
+      CORS_ORIGINS: http://localhost:8080
     depends_on:
       postgres:
         condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      # Server
-      HOST: 0.0.0.0
-      PORT: 1337
-      NODE_ENV: production
-      
-      # Database
-      DATABASE_CLIENT: postgres
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_NAME: strapi_db
-      DATABASE_USERNAME: strapi_admin
-      DATABASE_PASSWORD: Password123!
-      DATABASE_SSL: false
-      
     ports:
-      - "1337:1337"
+      - "3000:3000"
     volumes:
-      # Persist uploads and cache
-      - strapi_uploads:/opt/app/public/uploads
-      - strapi_cache:/opt/app/.cache
+      - backend_uploads:/app/uploads
     networks:
-      - strapi_network
+      - blog_network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:1337/_health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
-      start_period: 60s
+      retries: 3
+      start_period: 40s
+
+  # Static frontend served by Nginx
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        VITE_BACKEND_TYPE: mern
+        VITE_API_URL: http://backend:3000/api
+        VITE_BACKEND_URL_SERVER: http://backend:3000
+        VITE_SITE_URL: http://localhost:8080
+        VITE_SITE_NAME: "Modern Blog Leader"
+        VITE_LOCALES: fr,en
+        VITE_DEFAULT_LOCALE: fr
+        NODE_ENV: production
+    container_name: blog_frontend_simple
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    networks:
+      - blog_network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost"]
+      interval: 30s
+      timeout: 10s
       retries: 3
 
 networks:
-  strapi_network:
+  blog_network:
     driver: bridge
 
 volumes:
   postgres_data:
     driver: local
-  strapi_uploads:
-    driver: local
-  strapi_cache:
+  backend_uploads:
     driver: local

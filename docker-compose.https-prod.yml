@@ -64,9 +64,11 @@ services:
       args:
         VITE_BACKEND_TYPE: mern
         VITE_API_URL: https://blog.bh-systems.be/api
-        VITE_STRAPI_URL: https://blog.bh-systems.be
+        VITE_BACKEND_URL_SERVER: http://backend:3000
         VITE_SITE_URL: https://blog.bh-systems.be
-        VITE_SITE_NAME: Modern Blog Leader
+        VITE_SITE_NAME: "Modern Blog Leader"
+        VITE_LOCALES: fr,en
+        VITE_DEFAULT_LOCALE: fr
         NODE_ENV: production
     container_name: blog-frontend-https
     restart: unless-stopped

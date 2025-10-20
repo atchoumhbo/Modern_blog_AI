@@ -18,13 +18,21 @@ COPY . .
 # Arguments de build pour les variables d'environnement
 ARG VITE_BACKEND_TYPE=mern
 ARG VITE_API_URL=http://173.212.208.181/api
+ARG VITE_BACKEND_URL_SERVER=http://backend:3000
 ARG VITE_SITE_URL=http://173.212.208.181
+ARG VITE_SITE_NAME="Modern Blog Leader"
+ARG VITE_LOCALES=fr,en
+ARG VITE_DEFAULT_LOCALE=fr
 ARG NODE_ENV=production
 
 # Créer .env.production pour le build
 RUN echo "VITE_BACKEND_TYPE=${VITE_BACKEND_TYPE}" > .env.production && \
     echo "VITE_API_URL=${VITE_API_URL}" >> .env.production && \
+    echo "VITE_BACKEND_URL_SERVER=${VITE_BACKEND_URL_SERVER}" >> .env.production && \
     echo "VITE_SITE_URL=${VITE_SITE_URL}" >> .env.production && \
+    echo "VITE_SITE_NAME=${VITE_SITE_NAME}" >> .env.production && \
+    echo "VITE_LOCALES=${VITE_LOCALES}" >> .env.production && \
+    echo "VITE_DEFAULT_LOCALE=${VITE_DEFAULT_LOCALE}" >> .env.production && \
     echo "NODE_ENV=${NODE_ENV}" >> .env.production
 
 # Build de production
