@@ -127,7 +127,7 @@ export default function AdminDashboard() {
                 Gestion des articles
               </h2>
               <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                Gérez vos articles de blog avec TanStack Query et Strapi.
+                Gérez vos articles de blog avec TanStack Query et l'API MERN.
               </p>
             </div>
             <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">

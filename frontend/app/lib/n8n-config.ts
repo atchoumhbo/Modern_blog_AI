@@ -1,16 +1,16 @@
 /**
- * Configuration API pour N8N → Strapi
+ * Configuration API pour N8N → Backend MERN
  * Gestion des tokens et permissions pour l'automation
  */
 
 // Configuration des tokens API N8N
 export const N8N_API_CONFIG = {
-  // Token API pour N8N (à générer dans l'admin Strapi)
-  apiToken: process.env.STRAPI_N8N_API_TOKEN || '',
-  
-  // URL base Strapi
-  strapiUrl: process.env.STRAPI_URL || 'http://localhost:1337',
-  
+  // Token API pour N8N (à générer dans le backend MERN)
+  apiToken: process.env.MERN_N8N_API_TOKEN || process.env.N8N_API_TOKEN || process.env.STRAPI_N8N_API_TOKEN || '',
+
+  // URL base MERN
+  apiUrl: process.env.MERN_API_URL || process.env.API_URL || process.env.STRAPI_URL || 'http://localhost:3000',
+
   // Endpoints disponibles pour N8N
   endpoints: {
     articles: '/api/articles',
@@ -20,10 +20,10 @@ export const N8N_API_CONFIG = {
     upload: '/api/upload/files',
     users: '/api/users',
   },
-  
+
   // Headers requis
   headers: {
-    'Authorization': `Bearer ${process.env.STRAPI_N8N_API_TOKEN}`,
+    'Authorization': `Bearer ${process.env.MERN_N8N_API_TOKEN || process.env.N8N_API_TOKEN || process.env.STRAPI_N8N_API_TOKEN}`,
     'Content-Type': 'application/json',
   }
 } as const;
@@ -32,10 +32,10 @@ export const N8N_API_CONFIG = {
 export const N8N_PERMISSIONS = {
   // Collections que N8N peut modifier
   allowedCollections: [
-    'api::article.article',
-    'api::project.project', 
-    'api::category.category',
-    'api::tag.tag'
+    'articles',
+    'projects',
+    'categories',
+    'tags'
   ],
   
   // Actions autorisées pour N8N
@@ -85,7 +85,7 @@ export const N8N_TEMPLATES = {
   // Template pour créer un article
   createArticle: {
     method: 'POST',
-    url: '{{STRAPI_URL}}/api/articles',
+    url: '{{API_URL}}/api/articles',
     headers: {
       'Authorization': 'Bearer {{API_TOKEN}}',
       'Content-Type': 'application/json'
@@ -107,8 +107,8 @@ export const N8N_TEMPLATES = {
   
   // Template pour créer un projet
   createProject: {
-    method: 'POST', 
-    url: '{{STRAPI_URL}}/api/projects',
+    method: 'POST',
+    url: '{{API_URL}}/api/projects',
     headers: {
       'Authorization': 'Bearer {{API_TOKEN}}',
       'Content-Type': 'application/json'
@@ -132,7 +132,7 @@ export const N8N_TEMPLATES = {
   // Template pour upload d'image
   uploadImage: {
     method: 'POST',
-    url: '{{STRAPI_URL}}/api/upload',
+    url: '{{API_URL}}/api/upload',
     headers: {
       'Authorization': 'Bearer {{API_TOKEN}}'
       // Content-Type sera automatique pour multipart/form-data

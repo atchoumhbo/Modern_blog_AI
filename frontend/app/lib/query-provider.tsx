@@ -1,6 +1,6 @@
 /**
  * TanStack Query configuration et provider
- * Configuration optimisée pour Strapi avec authentification sécurisée
+ * Configuration optimisée pour le backend MERN avec authentification sécurisée
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,7 +8,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 
-// Configuration optimisée pour Strapi
+// Configuration optimisée pour MERN
 const createQueryClient = () => new QueryClient({
   defaultOptions: {
     queries: {

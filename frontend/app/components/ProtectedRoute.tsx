@@ -2,7 +2,7 @@
  * Composants de protection et authentification React
  */
 
-import { useAuth, usePermissions } from '~/lib/auth';
+import { useAuth } from '~/hooks/useAuth';
 import type { ReactNode } from 'react';
 
 interface ProtectedRouteProps {
@@ -21,18 +21,17 @@ export function ProtectedRoute({
   requireAdmin = false,
   fallback 
 }: ProtectedRouteProps) {
-  const { data: user, isLoading } = useAuth();
-  const permissions = usePermissions();
-  
+  const { user, isAuthenticated, isLoading } = useAuth();
+
   if (isLoading) {
     return <div className="loading">Chargement...</div>;
   }
-  
-  if (requireAuth && !permissions.isAuthenticated) {
+
+  if (requireAuth && !isAuthenticated) {
     return fallback || <div>Accès refusé - Connexion requise</div>;
   }
-  
-  if (requireAdmin && !permissions.isAdmin) {
+
+  if (requireAdmin && !user?.isAdmin) {
     return fallback || <div>Accès refusé - Droits administrateur requis</div>;
   }
   

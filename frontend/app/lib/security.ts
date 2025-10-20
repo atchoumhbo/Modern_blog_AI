@@ -41,8 +41,7 @@ export const defaultSecurityConfig: SecurityConfig = {
         "'self'",
         'data:',
         'https:',
-        'http://localhost:1337', // Strapi backend (développement local)
-        'http://localhost:1339', // Strapi backend (Docker)
+        'http://localhost:3000', // API MERN (développement local)
       ],
       'font-src': [
         "'self'",
@@ -51,8 +50,7 @@ export const defaultSecurityConfig: SecurityConfig = {
       ],
       'connect-src': [
         "'self'",
-        'http://localhost:1337', // Strapi API (développement local)
-        'http://localhost:1339', // Strapi API (Docker)
+        'http://localhost:3000', // API MERN (développement local)
         'https://www.google-analytics.com',
         'https://analytics.google.com',
       ],

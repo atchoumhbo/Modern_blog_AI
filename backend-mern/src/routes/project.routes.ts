@@ -13,8 +13,8 @@ const router = Router();
 
 // Public routes
 router.get('/', getProjects);
-router.get('/:id', getProjectById);
 router.get('/slug/:slug', getProjectBySlug);
+router.get('/:id', getProjectById);
 
 // Protected routes
 router.post('/', authenticateHybrid, requireWritePermission, createProject);

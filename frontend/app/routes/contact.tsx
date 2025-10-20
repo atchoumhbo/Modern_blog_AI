@@ -24,7 +24,7 @@ export default function Contact() {
 
   const handleSubmit = async (data: Record<string, any>) => {
     try {
-      // Ici vous enverriez les données à votre API Strapi
+      // Ici vous enverriez les données à votre API MERN
       console.log('Données sécurisées reçues:', data);
       
       // Simulation d'appel API

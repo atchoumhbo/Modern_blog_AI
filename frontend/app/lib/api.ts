@@ -63,7 +63,7 @@ async function fetchStrapi<T>(path: string, params?: Record<string, any>, { ttlM
 // Fetch function for MERN backend (simple REST with query params)
 async function fetchMern<T>(path: string, params?: Record<string, any>, { ttlMs = DEFAULT_TTL_MS }: { ttlMs?: number } = {}): Promise<T> {
   const queryParams = new URLSearchParams();
-  
+
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
@@ -96,6 +96,157 @@ async function fetchMern<T>(path: string, params?: Record<string, any>, { ttlMs 
   // Store in cache
   cache.set(url, { data: json, expires: now + ttlMs });
   return json;
+}
+
+type SortInput = string | string[] | Record<string, string> | undefined;
+
+function normalizeSort(sort: SortInput, defaultField: string) {
+  if (!sort) {
+    return { field: defaultField, order: 'desc' as const };
+  }
+
+  if (Array.isArray(sort) && sort.length > 0) {
+    const [first] = sort;
+    if (typeof first === 'string' && first.includes(':')) {
+      const [field, direction] = first.split(':');
+      return { field, order: (direction?.toLowerCase() === 'asc' ? 'asc' : 'desc') as const };
+    }
+  }
+
+  if (typeof sort === 'string') {
+    if (sort.includes(':')) {
+      const [field, direction] = sort.split(':');
+      return { field, order: (direction?.toLowerCase() === 'asc' ? 'asc' : 'desc') as const };
+    }
+    return { field: sort, order: 'desc' as const };
+  }
+
+  if (typeof sort === 'object') {
+    const [field, direction] = Object.entries(sort)[0] || [defaultField, 'desc'];
+    return { field, order: (typeof direction === 'string' && direction.toLowerCase() === 'asc' ? 'asc' : 'desc') as const };
+  }
+
+  return { field: defaultField, order: 'desc' as const };
+}
+
+function toStrapiMeta(meta: any | undefined, fallbackPage: number, fallbackSize: number, totalCount: number) {
+  const page = Number(meta?.page ?? fallbackPage);
+  const pageSize = Number(meta?.limit ?? fallbackSize);
+  const total = Number(meta?.total ?? totalCount);
+  const pageCount = Number(meta?.totalPages ?? (pageSize > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1));
+
+  return {
+    pagination: {
+      page,
+      pageSize,
+      pageCount,
+      total,
+    },
+  };
+}
+
+function extractSearchFromFilters(filters: any): string | undefined {
+  if (!filters) return undefined;
+
+  if (filters.title?.$contains) return filters.title.$contains;
+  if (filters.title?.$containsi) return filters.title.$containsi;
+
+  if (filters.$or && Array.isArray(filters.$or)) {
+    for (const clause of filters.$or) {
+      if (clause?.title?.$contains) return clause.title.$contains;
+      if (clause?.title?.$containsi) return clause.title.$containsi;
+      if (clause?.excerpt?.$contains) return clause.excerpt.$contains;
+      if (clause?.excerpt?.$containsi) return clause.excerpt.$containsi;
+      if (clause?.body?.$contains) return clause.body.$contains;
+      if (clause?.body?.$containsi) return clause.body.$containsi;
+      if (clause?.content?.$contains) return clause.content.$contains;
+      if (clause?.content?.$containsi) return clause.content.$containsi;
+    }
+  }
+
+  return undefined;
+}
+
+function extractArticleFilterParams(filters: any = {}): Record<string, string> {
+  const params: Record<string, string> = {};
+
+  const search = extractSearchFromFilters(filters);
+  if (search) {
+    params.search = search;
+  }
+
+  const categoryId = filters.category?.id || filters.category?.documentId;
+  if (categoryId) {
+    params.category = String(categoryId);
+  }
+
+  const categorySlug = filters.category?.slug?.$eq || filters.category?.slug;
+  if (categorySlug) {
+    params.categorySlug = String(categorySlug);
+  }
+
+  const slug = filters.slug?.$eq || filters.slug;
+  if (slug) {
+    params.slug = String(slug);
+  }
+
+  const tagId = filters.tags?.id || filters.tags?.documentId;
+  if (tagId) {
+    params.tag = String(tagId);
+  }
+
+  const tagSlug = filters.tags?.slug?.$eq;
+  if (tagSlug) {
+    params.tagSlug = String(tagSlug);
+  }
+
+  const status = filters.status?.$eq || filters.status;
+  if (status) {
+    params.status = String(status);
+  }
+
+  const publishedAfter = filters.publishedAt?.$gt || filters.publishedAt?.$gte;
+  if (publishedAfter) {
+    params.publishedAfter = new Date(publishedAfter).toISOString();
+  }
+
+  const publishedBefore = filters.publishedAt?.$lt || filters.publishedAt?.$lte;
+  if (publishedBefore) {
+    params.publishedBefore = new Date(publishedBefore).toISOString();
+  }
+
+  return params;
+}
+
+function extractProjectFilterParams(filters: any = {}): Record<string, string> {
+  const params: Record<string, string> = {};
+
+  const search = extractSearchFromFilters(filters);
+  if (search) {
+    params.search = search;
+  }
+
+  const categoryId = filters.category?.id || filters.category?.documentId;
+  if (categoryId) {
+    params.category = String(categoryId);
+  }
+
+  const categorySlug = filters.category?.slug?.$eq || filters.category?.slug;
+  if (categorySlug) {
+    params.categorySlug = String(categorySlug);
+  }
+
+  const status = filters.status?.$eq || filters.status;
+  if (status) {
+    params.status = String(status);
+  }
+
+  const tagId = filters.tags?.id || filters.tags?.documentId;
+  if (tagId) {
+    params.tag = String(tagId);
+  }
+
+  return params;
 }
 
 // Map Strapi post to frontend Post
@@ -136,8 +287,8 @@ function mapStrapiPost(item: any): Post {
 
 // Map MERN post to frontend Post
 function mapMernPost(item: any): Post {
-  const image = item.featuredImage?.url || item.featuredImage;
-  const authorName = item.author?.name || item.author?.email;
+  const image = item.coverImage || item.featuredImage?.url || item.featuredImage;
+  const authorName = item.author?.username || item.author?.email || [item.author?.firstName, item.author?.lastName].filter(Boolean).join(' ').trim();
   const authorAvatar = item.author?.avatar?.url || item.author?.avatar;
   const tags = item.tags?.map((t: any) => t.name || t) || [];
   const category = item.category?.name || item.category;
@@ -157,7 +308,7 @@ function mapMernPost(item: any): Post {
     seo: {
       metaTitle: item.metaTitle || item.title,
       metaDescription: item.metaDescription,
-      keywords: item.keywords,
+      keywords: item.metaKeywords,
       canonicalURL: item.canonicalUrl,
     },
   };
@@ -166,26 +317,26 @@ function mapMernPost(item: any): Post {
 export async function getPosts({ page = 1, pageSize = 10, sort, filters, language }: { page?: number; pageSize?: number; sort?: any; filters?: any; language?: string } = {}) {
   // MERN backend support
   if (config.backendType === 'mern') {
+    const { field, order } = normalizeSort(sort, 'publishedAt');
     const params: Record<string, any> = {
       page,
       limit: pageSize,
-      sort: sort?.publishedAt ? 'publishedAt' : (sort?.createdAt ? 'createdAt' : 'publishedAt'),
-      order: (typeof sort?.publishedAt === 'string' ? sort.publishedAt : 'desc'),
+      sort: field,
+      order,
+      status: 'published',
+      ...extractArticleFilterParams(filters),
     };
 
-    // Add filters if present
-    if (filters) {
-      if (filters.title?.$contains) params.search = filters.title.$contains;
-      if (filters.category?.id) params.category = filters.category.id;
-      if (filters.slug?.$eq) params.slug = filters.slug.$eq;
-      if (language) params.language = language;
-    } else if (language) {
+    if (language) {
       params.language = language;
     }
 
-    const data = await fetchMern<{ data: any[]; meta: any }>("/articles", params);
-    const posts = (data.data || []).map(mapMernPost);
-    return { posts, meta: data.meta };
+    const data = await fetchMern<{ data?: any[]; meta?: any }>("/articles", params);
+    const items = Array.isArray((data as any)?.data) ? ((data as any).data as any[]) : [];
+    const posts = items.map(mapMernPost);
+    const total = (data as any)?.meta?.total ?? posts.length;
+    const meta = toStrapiMeta((data as any)?.meta, page, pageSize, total);
+    return { posts, meta };
   }
 
   // Strapi backend (original code)
@@ -216,10 +367,9 @@ export async function getPosts({ page = 1, pageSize = 10, sort, filters, languag
 export async function getPostBySlug(slug: string) {
   // MERN backend support
   if (config.backendType === 'mern') {
-    const params = { slug };
-    const data = await fetchMern<{ data: any[] }>("/articles", params);
-    const item = data.data?.[0];
-    return item ? mapMernPost(item) : null;
+    const data = await fetchMern<any>(`/articles/slug/${encodeURIComponent(slug)}`);
+    if (!data) return null;
+    return mapMernPost(data);
   }
 
   // Strapi backend (original code)
@@ -243,6 +393,10 @@ export async function getPostBySlug(slug: string) {
 export async function getPostById(id: string | number) {
   const idStr = String(id);
   const isNumeric = /^\d+$/.test(idStr);
+  if (config.backendType === 'mern') {
+    const data = await fetchMern<any>(`/articles/${encodeURIComponent(idStr)}`);
+    return data ? mapMernPost(data) : null;
+  }
   const orConds: any[] = [{ documentId: { $eq: idStr } }];
   if (isNumeric) {
     orConds.unshift({ id: { $eq: Number(idStr) } });
@@ -310,8 +464,8 @@ function mapStrapiProject(item: any): Project {
 
 // Map MERN project to frontend Project
 function mapMernProject(item: any): Project {
-  const image = item.featuredImage?.url || item.featuredImage;
-  const authorName = item.author?.name || item.author?.email;
+  const image = item.coverImage || item.featuredImage?.url || item.featuredImage;
+  const authorName = item.author?.username || item.author?.email || [item.author?.firstName, item.author?.lastName].filter(Boolean).join(' ').trim();
   const authorAvatar = item.author?.avatar?.url || item.author?.avatar;
   const technologies: string[] = Array.isArray(item.technologies)
     ? item.technologies.map((t: any) => (typeof t === "string" ? t : t?.name || ""))
@@ -333,7 +487,7 @@ function mapMernProject(item: any): Project {
     start_date: item.startDate,
     end_date: item.endDate,
     category: item.category?.name || item.category || "",
-    featured: item.status === "featured",
+    featured: item.status === "featured" || item.isPublished === true,
     image,
     featured_image: image,
     technologies,
@@ -349,7 +503,7 @@ function mapMernProject(item: any): Project {
     seo: {
       metaTitle: item.metaTitle || item.title,
       metaDescription: item.metaDescription,
-      keywords: item.keywords,
+      keywords: item.metaKeywords,
       canonicalURL: item.canonicalUrl,
     },
   };
@@ -358,27 +512,26 @@ function mapMernProject(item: any): Project {
 export async function getProjects({ page = 1, pageSize = 12, sort, filters, language }: { page?: number; pageSize?: number; sort?: any; filters?: any; language?: string } = {}) {
   // MERN backend support
   if (config.backendType === 'mern') {
+    const { field, order } = normalizeSort(sort, 'createdAt');
     const params: Record<string, any> = {
       page,
       limit: pageSize,
-      sort: sort?.publishedAt ? 'publishedAt' : (sort?.createdAt ? 'createdAt' : 'createdAt'),
-      order: (typeof sort?.publishedAt === 'string' ? sort.publishedAt : 'desc'),
+      sort: field,
+      order,
+      status: 'published',
+      ...extractProjectFilterParams(filters),
     };
 
-    // Add filters if present
-    if (filters) {
-      if (filters.title?.$contains) params.search = filters.title.$contains;
-      if (filters.category?.id) params.category = filters.category.id;
-      if (filters.slug?.$eq) params.slug = filters.slug.$eq;
-      if (filters.status) params.status = filters.status;
-      if (language) params.language = language;
-    } else if (language) {
+    if (language) {
       params.language = language;
     }
 
-    const data = await fetchMern<{ data: any[]; meta: any }>("/projects", params);
-    const projects = (data.data || []).map(mapMernProject);
-    return { projects, meta: data.meta };
+    const data = await fetchMern<{ data?: any[]; meta?: any }>("/projects", params);
+    const items = Array.isArray((data as any)?.data) ? ((data as any).data as any[]) : [];
+    const projects = items.map(mapMernProject);
+    const total = (data as any)?.meta?.total ?? projects.length;
+    const meta = toStrapiMeta((data as any)?.meta, page, pageSize, total);
+    return { projects, meta };
   }
 
   // Strapi backend (original code)
@@ -409,10 +562,9 @@ export async function getProjects({ page = 1, pageSize = 12, sort, filters, lang
 export async function getProjectBySlug(slug: string) {
   // MERN backend support
   if (config.backendType === 'mern') {
-    const params = { slug };
-    const data = await fetchMern<{ data: any[] }>("/projects", params);
-    const item = data.data?.[0];
-    return item ? mapMernProject(item) : null;
+    const data = await fetchMern<any>(`/projects/slug/${encodeURIComponent(slug)}`);
+    if (!data) return null;
+    return mapMernProject(data);
   }
 
   // Strapi backend (original code)
